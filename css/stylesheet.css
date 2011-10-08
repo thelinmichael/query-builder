@@ -1,0 +1,568 @@
+body{
+	  background-color: #ddd;
+	  margin:0;
+	  padding:0 0 0 0;
+}
+div#right-sidebar
+{
+  position:absolute;
+  top:17%;
+  right:0;
+  width:23%;
+  height:100%;
+  padding-right: 10px;
+}
+
+@media screen{
+	body>div#right-sidebar
+	{
+		position:fixed;
+	}
+}
+
+* html body{
+	overflow:hidden;
+} 
+
+* html div#content{
+	height:100%;
+	overflow:auto;
+}
+
+#basket-header {
+	margin-top: 7%;
+	height: 5%;
+}
+ 
+#basket-body {
+	width: 100%;
+	height: 65%;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	position: relative;
+	top: 20px;
+}
+ 
+ 
+#window 
+{
+	margin: 30px 0px 5px 30px;
+	width: 70%;
+}
+
+
+#main {
+	box-shadow: 4px 4px 5px #AAA;
+	overflow-y: scroll;
+	overflow-x: hidden;
+	border: 2px solid #ddd;
+	width: 100%;
+	height: 55%;	
+	padding-left: 10px;
+	padding-top: 10px;
+	background-color: #fff;
+	margin-bottom: 10px;
+}
+
+#footer {
+	width: 80%;
+}
+#filter
+{	
+	border-color: #DDD;
+	border-width : 2px;
+	border-style: solid;
+	display: inline;
+	box-shadow: 4px 4px 5px #AAA;	
+	width: 20%;
+	float: right;
+	margin-top: 3px;
+	font-size: 1.2em;
+	font-family: helvetica;
+	padding: 4px;
+	color: #333;
+}
+
+#status{
+    width:50%;
+    padding:10px;
+    outline:none;
+    height:36px;
+}
+.focusField{
+        border:solid 2px #73A6FF;
+        background:#EFF5FF;
+        color:#000;
+		box-shadow: 1px 1px 3px #333;	
+    }
+    .idleField{
+        background:#EEE;
+        color: #6F6F6F;
+        border: solid 2px #DFDFDF;
+		box-shadow: 1px 1px 3px #333;	
+    }
+
+	
+	
+#inputContainer {
+	margin-left: 10px;
+}
+}
+
+#inputContainer tr
+{
+	margin: 10px;
+}
+input {
+	font-size: 0.8em;
+}
+
+#inputContainer tr td input {
+	position: relative;
+	bottom: 13px;
+}
+
+.collection
+{
+	background-color: #666;
+	position: relative;
+	top: 7px;
+	min-width: 135px;
+	max-width: 135px;
+	min-height: 68px;
+	max-height: 68px;
+	border: none;
+	cursor: default;
+	overflow: hidden;
+	padding-left: 3px;
+	margin-right: 4px;
+}
+.collectionRows {
+	margin-bottom: 3px;
+	padding-right: 3px;
+	max-height: 47px;
+	overflow-y: auto;
+}
+
+#inputContainer tr .subtitleTd
+{
+	width: 120px;
+	height: 50px;
+}
+
+.subtitle 
+{
+	height: 50px;
+	bottom: 48px;
+    font-family: Helvetica;
+    font-size: 12px;
+    font-variant: small-caps;
+    position: relative;
+	color: #eee;
+	left: 3px;
+}
+
+#first 
+{
+	position: relative;
+	bottom: 56px;
+}
+
+#header
+{
+	padding-top: 10px;
+	background-color: #666;
+	width: 100%;
+	height: 17%;
+}
+
+
+.DatabaseElement {
+	background-color: #73A6FF;
+	display: block;
+	color: white;
+	padding: 3px 0px 3px 10px;
+	border-radius: 0.5em;
+	margin: 3px 0px 3px 0px;
+		box-shadow: 1px 1px 3px #333;	
+}
+.DataBaseElementText 
+{
+	font-family: Helvetica;
+    font-size: 10px;
+    font-variant: small-caps;
+}
+.DatabaseElementRemove {
+	float: right;
+	margin-right: 10px;
+	position: relative;
+	padding-right: 3px;
+	padding-left: 3px;
+	padding-bottom: 2px;
+	border-radius: 0.3em;
+	bottom: 1px;
+	font-family: Helvetica;
+    font-size: 10px;  
+}
+
+#eraseContents {
+	float: left;
+	position: relative;
+	top: 3px;
+	margin-left: 38px;
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+#eraseContents img {
+	width: 25px;
+	height: 25px;
+}
+#eraseContents span {
+	position: relative;
+	bottom: 10px;
+}
+
+.Row 
+{
+	width: 100%;
+	margin: 5px;
+	border-width: 0px 0px 1px 0px;
+	border-style: dotted;
+	border-color: #ccc;
+	padding: 5px 0px;
+}
+.RowFilter
+{
+	background-color: #73A6FF;
+	color: white;
+	position: relative;
+	bottom: 3px;
+	padding: 1px 2px 1px 2px;
+	border-radius: 0.5em;
+	font-family: helvetica;
+	font-size: 10px;
+	font-variant: small-caps;
+	width: 10%;
+}
+.RowName
+{
+	width: 30px;
+	font-family: calibri;
+	font-size: 20px;
+	margin: 0px 10px 0px 10px;
+}
+#numHits
+{
+	float: left;
+	position: relative;
+	top: 7px;
+	margin-left: 38px;
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+
+.OpenColumnBasket {
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+
+.BasketDiv {
+	border-radius: 1em;
+	margin: 15px;
+	overflow: hidden;	
+	width: 80%;
+}
+.BasketCondition {
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+.BasketConditionInput {
+	margin-left: 10px;
+}
+.BasketAdd {
+	margin-left: 20px;
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+.BasketItem {
+	margin-top: 20px;
+	background-color: white;
+	height: 100px;
+	width: 150px;
+	overflow: hidden;
+	box-shadow: 4px 4px 5px #AAA;	
+	border-radius: 0.7em;
+	margin-right: 20px;
+}
+.BasketName {
+	margin: 10px;
+	font-family: Helvetica;
+	font-size: 10px;
+	font-variant: small-caps;
+}
+#aboveMain {
+	margin-left: 10px;
+	margin-bottom: 3px;
+	font-family: Helvetica;
+	font-size: 11px;
+	font-variant: small-caps;
+}
+#select {
+	margin-right: 3px;
+}
+#unselect {
+	margin-right: 3px;
+}
+#withselected {
+	margin-left: 35px;
+}
+#selectaction {
+	font-size: 1em;
+	font-family: Helvetica;
+	font-variant: small-caps;
+}
+#performSelectAction {
+	padding: 2px 4px 2px 4px;
+	background-color: #888;
+	border-radius: 0.3em;
+	margin-left: 5px;
+	color: white;
+	font-size: 11px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+}
+#filterInfo {
+	position: relative;
+	top: 2px;
+	margin-left: 9px;
+	font-size: 11px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+}
+.submit {
+	color: #666;
+	font-size: 18px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+	margin-left: 3px;
+	margin-right: 5px;
+	padding: 2px 5px 2px 5px;
+	background-color: #ddd;
+	border-radius: 0.6em;
+	font-weight: bold;
+	position: relative;
+	bottom: 15px;
+	box-shadow: 1px 1px 3px #333;	
+}
+
+.addSelect {
+	color: #666;
+	font-size: 18px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+	margin-left: 3px;
+	padding: 2px 5px 2px 5px;
+	background-color: #ddd;
+	border-radius: 0.6em;
+	position: relative;
+	bottom: 15px;
+	box-shadow: 1px 1px 3px #333;	
+}
+.collectionFooter {
+	
+}
+.CollectionFooterButton {
+	position: relative;
+	left: 8px;
+	color: white;
+	font-size: 10.5px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+	margin-right: 15px;
+}
+.collectionFooterTd {}
+.basketChangeView {
+	margin-right: 4px;
+	position: relative;
+	top: 8px;
+}
+.basketviewspan {
+	border-width: 0px 1px 0px 0px; 
+	border-style: dotted;
+	border-color: #888;
+	margin-left: 7px;
+	padding-right: 7px;
+}
+.basketviewspan:nth-child(3) {
+	border-width: 0px 0px 0px 0px; 
+	margin-left: 7px;
+}
+.basketviewspan:nth-child(1) {
+	border-width: 0px 1px 0px 0px; 
+	margin-left: 18px;
+	padding-right: 7px;
+}
+.BasketBodyType {
+	margin-top: 20px;
+}
+.customarea {
+	width: 250px;
+	height: 60px;
+	margin-bottom: 10px;
+	 resize:vertical;
+}
+.BasketBodyHeader {
+	font-size: 12px;
+	font-family: Arial;
+	width: 200px;
+	margin-top: 10px;
+	margin-left: 10px;
+	margin-bottom: 20px;
+}
+.notice {
+	background-color: #ccc; !#73A6FF;
+	color: black;
+	border-radius: 0.5em;
+	border-color: #bbb; !#4073BB;
+	border-width: 0.9px;
+	border-style: solid;
+	padding: 8px;
+	box-shadow: 1px 1px 2px #ccc;	
+}
+.CustomAddAnother {
+	margin-left: 10px;
+	font-size: 11px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+}
+.removeAnother {
+	color: #999999;
+    font-family: Helvetica;
+    font-size: 12px;
+	font-weight: bold;
+    margin-left: 10px;
+    position: relative;
+	top: 17px;
+}
+.inputLabel {
+	font-size: 12px;
+	font-family: Arial;
+	margin-bottom: 5px;
+}
+.inputHolder {
+	margin-bottom: 10px;
+}
+
+.button {
+	padding: 2px 4px 2px 4px;
+	background-color: #888;
+	border-radius: 0.3em;
+	margin-left: 5px;
+	color: white;
+	font-size: 11px;
+	font-family: Helvetica;
+	font-variant: small-caps;
+}
+.RowDatabase {
+	font-family: arial;
+	font-size: 13;
+	margin: 0px 10px 0px 10px;
+	min-width: 250px;
+	max-width: 250px;
+	overflow: hidden;
+}
+.RowTable {
+	font-family: arial;
+	font-size: 13;
+	margin: 0px 10px 0px 10px;
+	min-width: 300px;
+	max-width: 300px;
+	overflow: hidden;
+}
+.RowColumn {
+    font-family: Arial;
+    font-size: 14px;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 0;
+    max-width: 250px;
+    min-width: 250px;
+    overflow: hidden;
+	font-weight: bold;
+}
+.Aggregation {
+	background-color: #EEEEEE;
+    border-color: #DDDDDD;
+    border-style: solid;
+    border-width: 0 0 1px;
+    padding: 10px;
+}
+.Conditions {
+	background-color: #EEE;
+	padding: 10px 10px 20px;
+}
+.ColumnAdd {
+	background-color: #666;
+	padding: 10px 10px;
+}
+.ColumnRowButton {
+	padding: 1px 3px;
+	font-family: Helvetica;
+	font-size: 12px;
+	margin: 0px 5px;
+	color: white;
+}
+#ActivateAggregation {
+	font-family: Arial;
+	font-size: 15px;
+	margin: 5px 20px 10px 5px;
+}
+#aggregationInfo {
+	font-family: Arial;
+	font-size: 10px;
+	margin-left: 15px;
+}
+#ConditionHeader {
+	font-family: Arial;
+	font-size: 15px;
+	display: inline;
+	margin: 0px 10px 10px 5px;
+}
+#ConditionHeaderHelp {
+	font-family: Arial;
+	font-size: 10px;
+	display: inline;
+	margin-bottom: 10px;
+	margin-left: 5px;
+}
+.conditionSelect {
+	display: 'inline';
+	margin-right: 10px;
+}
+.conditionHeaderDiv {
+	margin-bottom: 15px;
+}
+.SelectDiv {
+	margin: 20px;
+	padding: 10px;
+	border-style: dotted;
+	border-width: 1px;
+	border-color: #bbb;
+}
+.ConditionInput {
+	margin-right: 5px;
+}
+.AndOr {
+	font-family: Helvetica;
+	font-size: 12px;
+	margin-right: 5px;
+	margin-left: 5px;
+}
+.AnotherBox {
+	margin-left: 25%;
+}

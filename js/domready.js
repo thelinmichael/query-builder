@@ -1,0 +1,2485 @@
+window.addEvent('domready', function() 
+{  	
+	var main = new Main();	
+}); 
+
+var Main = new Class(
+{
+	initialize: function()
+	{
+		this.mainWindow  = new MainWindow(this);
+		this.dataHandler = new DataHandler(this);
+		this.basket = new Basket(this, 'basket-body');
+		this.setupInputs();
+		
+		this.eraseContents = $('eraseContents');
+		$(this.eraseContents).addEvents(
+		{
+			"mouseenter" : function() { $('eraseContentsText').setStyle("text-decoration", "underline"); $(this.eraseContents).setStyle("cursor", "pointer"); }.bind(this),
+			"mouseleave" : function() { $('eraseContentsText').setStyle("text-decoration", "none"); $(this.eraseContents).setStyle("cursor", "default"); }.bind(this),
+			"click" : function() { 
+				this.numHits.set("text", ""); 
+				this.mainWindow.clean(); 
+				this.mainWindow.resetFilterInfo(); 
+				this.mainWindow.selectBox.reset();	// reset select
+				
+				}.bind(this)
+		});
+		
+		this.numHits = $('numHits');
+	},	
+	
+	setupInputs: function()
+	{		 
+		this.inputDatabase = new InputField(this, "databaseInput", { defaultText : "Search database(s)", dbInfo: { table : "database_lookup", column : "database_name" } }).attach();
+		this.inputTable    = new InputField(this, "tableInput", { defaultText : "Search table(s)", dbInfo: { table : "table_lookup", column : "table_name" } }).attach();
+		this.inputColumn   = new InputField(this, "columnInput", { defaultText : "Search column(s)", dbInfo: { table : "column_lookup", column : "column_name" } }).attach();	
+					
+		new Autocompleter.Request.JSON(this, 'columnInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'column'});
+		new Autocompleter.Request.JSON(this, 'tableInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'table'	});
+		new Autocompleter.Request.JSON(this, 'databaseInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'database' });
+				
+		this.databaseBrowse = new BrowseButton(this, 'database', 'first').attach();
+		this.tableBrowse = new BrowseButton(this, 'table', 'second').attach();	
+		this.columnBrowse = new BrowseButton(this, 'column', 'third').attach();
+		
+		this.databaseCollection = new DatabaseElementContainer(this, 'databaseCollection', 'collectionFooterDatabase', this.tableBrowse);
+		this.tableCollection    = new DatabaseElementContainer(this, 'tableCollection', 'collectionFooterTable', this.columnBrowse);
+		this.columnCollection   = new DatabaseElementContainer(this, 'columnCollection', 'collectionFooterColumn', null);
+				
+		this.databaseAdd = new CollectionAdd(this, this.databaseCollection, this.inputDatabase, 'databaseAdd').attach();
+		this.tableAdd    = new CollectionAdd(this, this.tableCollection, this.inputTable, 'tableAdd').attach();
+		this.columnAdd   = new CollectionAdd(this, this.columnCollection, this.inputColumn, 'columnAdd').attach();
+		
+		this.submitDatabase = new Submit(this, this.databaseCollection, 'database', 'databaseSubmit').attach();
+		this.submitTable = new Submit(this, this.tableCollection, 'table', 'tableSubmit').attach();
+		this.submitColumn = new Submit(this, this.columnCollection, 'column', 'columnSubmit').attach();
+	},
+	
+	getDatabaseValue: function() { return this.inputDatabase.getValue(); },
+	getTableValue: function() {	return this.inputTable.getValue(); },
+	getColumnValue: function() { return this.inputColumn.getValue(); },
+	
+	getDatabaseValues: function() 
+	{
+		var returnArray = new Array();
+		Array.each(this.databaseCollection.getValues(), function(value)
+		{
+			returnArray.push(value.getName());
+		});
+		return returnArray;
+	},
+	
+	getTableValues: function() 
+	{ 
+		var returnArray = new Array();
+		Array.each(this.tableCollection.getValues(), function(value)
+		{
+			returnArray.push(value.getName());
+		});
+		return returnArray;
+	},
+	
+	getColumnValues: function() 
+	{ 
+		var returnArray = new Array();
+		Array.each(this.columnCollection.getValues(), function(value)
+		{
+			returnArray.push(value.getName());
+		});
+		return returnArray;
+	},
+	
+	readData: function(type, notContainer)
+	{
+		try 
+		{
+			data = { "type" : type, "database" : this.getDatabaseValues(), "table" : this.getTableValues(), "column" : this.getColumnValues()};
+			if (notContainer)
+				data.notcontainer = 1;
+			else 
+				data.notcontainer = 0;
+			// Check type to know which array to collect information from.
+			this.mainWindow.setType(type);
+			this.dataHandler.readData(data, this.setQueryResult.bind(this));		
+		}
+		catch(e)
+		{
+			throw new Error("Could not fetch data: " + e.message);
+		}
+	},
+	
+	showData: function(collection, type)
+	{	
+		var showArray = new Array();
+		this.mainWindow.setType(type);
+		Array.each(collection.getValues(), function(collectionElement)
+		{	
+			if (type == "database")
+			{
+				data = collectionElement.name;
+			}
+			else if (type == "table")
+			{
+				splitString = collectionElement.title.split(' ');
+				data = splitString[1] + '.' + collectionElement.name;
+			}
+			else if (type == "column")
+			{
+				splitString = collectionElement.title.split(' ');
+				data = splitString[1] + '.' + splitString[3] + '.' + collectionElement.name;
+			}
+			showArray.push(data);
+		});
+		this.numHits.set("text", showArray.length + " hit(s).");
+		this.mainWindow.massageData(showArray);
+	},
+	
+	setQueryResult: function(result)
+	{
+		result = JSON.decode(result);	
+		this.numHits.set("text", result.length + " hit(s).");
+		this.mainWindow.massageData(result);
+	},	
+});
+
+var MainWindow = new Class(
+{
+	initialize: function(main)
+	{
+		this.element = $('main');
+		this.main = main;
+		this.rows = new Array();
+		this.type = null;
+		this.filter = new Filter('filter', this);
+		this.filterInfo = $('filterInfo');
+		this.spinner = new Spinner($(this), { message: "Fetching results from database...", class : "spinner" } );
+		this.selectAll = $('select');
+		this.unselectAll = $('unselect');
+		this.selectBox = new SelectAction(this, 'selectaction');
+		this.attach();
+	},	
+	
+	setHtml: function(html)
+	{
+		$(this).set("html", html);
+	},
+	
+	setType: function(type)
+	{
+		this.type = type;
+	},
+	
+	resetChecked: function()
+	{
+		Array.each(this.rows, function(row)
+		{
+			if (row.isChecked())
+				row.check(false);
+		}.bind(this));	
+	},
+	
+	// doSelect bool. true if select all checked. false if unselect all checked.
+	selectChecked: function(doSelect)
+	{
+		var collection;
+		if (this.type == "database") 
+			collection = this.main.databaseCollection;	
+		else if (this.type == "table")
+			collection = this.main.tableCollection;
+		else if (this.type == "column")
+			collection = this.main.columnCollection;
+		else
+			throw new Error("Could not identify type.");
+		if (doSelect)
+		{
+			Array.each(this.rows, function(row)
+			{
+				if (row.isChecked())
+					collection.add(new DatabaseElement(collection, row.data));
+			}.bind(this));			
+		}
+		else
+		{
+			Array.each(this.rows, function(row)
+			{
+				if (row.isChecked())
+				{
+					collection.removeJustText(row.data);
+				}
+			}.bind(this));			
+		}
+	},
+	
+	startSpinner: function()
+	{
+		this.spinner.show();
+	},
+	
+	stopSpinner: function()
+	{
+		this.spinner.hide();
+	},
+	
+	massageData: function(dataArray)
+	{		
+		this.selectBox.setOptionType(this.type);	
+		this.rows.empty();
+		this.clean();
+		this.resetFilterInfo();
+		this.filter.reset();
+		
+		if (dataArray.length > 10000) 
+		{
+			throw new Error("Too many hits.");
+		}
+		Array.each(dataArray, function(data) 
+		{
+			if (this.type == "database") 
+				this.rows.push(new DatabaseRow(this, data, this.main.databaseCollection));	
+			else if (this.type == "table")
+				this.rows.push(new TableRow(this, data, this.main.tableCollection));
+			else if (this.type == "column")
+				this.rows.push(new ColumnRow(this, data, this.main.columnCollection));
+		}.bind(this));
+		Array.each(this.rows, function(row)
+		{
+			$(row).inject($(this));
+		}.bind(this));
+	},
+	
+	clean: function()
+	{
+		$(this).getChildren().destroy();
+	},
+	
+	attach: function()
+	{
+		$(this.selectAll).addEvents(
+		{
+			'mouseenter' : function() { $(this.selectAll).setStyles({ cursor : "pointer", "text-decoration" : "underline" }); }.bind(this),
+			'mouseleave' : function() { $(this.selectAll).setStyles({ cursor : "default", "text-decoration" : "none" } ); }.bind(this),
+			'click' : function() {
+				Array.each(this.rows, function(row)
+				{
+					if ($(row).getStyle("display") != "none")
+						row.check(true);
+				}.bind(this));
+			}.bind(this)
+		});
+		
+		$(this.unselectAll).addEvents(
+		{
+			'mouseenter' : function() { $(this.unselectAll).setStyles({ cursor : "pointer", "text-decoration" : "underline" }); }.bind(this),
+			'mouseleave' : function() { $(this.unselectAll).setStyles({ cursor : "default", "text-decoration" : "none" } ); }.bind(this),
+			'click' : function() {
+				Array.each(this.rows, function(row)
+				{
+					if ($(row).getStyle("display") != "none")
+						row.check(false);
+				}.bind(this));
+			}.bind(this)
+		});
+		
+	},
+	
+	resetFilterInfo: function()
+	{
+		this.filterInfo.set("text", "");
+	},
+	
+	updateFilterInfo: function(num)
+	{
+		this.filterInfo.set("text", "(" + num + " after filtering)");
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var SelectAction = new Class(
+{
+	initialize: function(mainWindow, elementId)
+	{
+		this.element = $(elementId);
+		this.mainWindow = mainWindow;
+		this.performOptions = new Array();
+		this.performAction = $('performSelectAction');
+		this.setOptionType("none");		
+		this.attach();
+	},
+
+	toElement: function() { return this.element; },
+	
+	attach: function() {
+		$(this.performAction).addEvents(
+		{
+			'mouseenter' : function() { $(this.performAction).setStyles({ 'background-color' : '#666', 'cursor': 'pointer' }); }.bind(this),
+			'mouseleave' : function() { $(this.performAction).setStyles({ 'background-color' : '#888', 'cursor': 'default' }); }.bind(this),
+			'click' : function() { this.perform(); }.bind(this)
+		});
+	},
+	
+	reset: function()
+	{
+		this.setOptionType("none");
+	},
+	
+	addPerformOption: function(option)
+	{
+		$(option).inject($(this));
+		this.performOptions.push(option);
+	},
+	
+	removePerformOption: function(option)
+	{
+		this.performOptions.erase(option);
+		$(option).destroy();
+	},
+	
+	removeAllPerformOptions: function()
+	{
+		var i;
+		for (i = 0; i < this.performOptions.length; i++)
+		{	
+			this.removePerformOption(this.performOptions[i]);
+			i--;
+		}	
+	},
+	
+	setOptionType: function(type)
+	{
+		if (type == "none")
+		{
+			this.removeAllPerformOptions(); // remove all options.
+		}
+		else if (type == "database")
+		{
+			this.removeAllPerformOptions(); // remove all options. 
+			// add options that are relevant to databases.
+			this.addPerformOption(new AddToSelected(this));
+			this.addPerformOption(new RemoveFromSelected(this));
+		}
+		else if (type == "table")
+		{
+			this.removeAllPerformOptions(); // remove all options. 
+			// add options that are relevant to tables.
+			this.addPerformOption(new AddToSelected(this));
+			this.addPerformOption(new RemoveFromSelected(this));
+			this.addPerformOption(new AddToBasket(this));
+			this.addPerformOption(new RemoveFromBasket(this));
+			
+		}
+		else if (type == "column")
+		{
+			this.removeAllPerformOptions(); // remove all options. 
+			// add options that are relevant to columns.
+			this.addPerformOption(new AddToSelected(this));
+			this.addPerformOption(new RemoveFromSelected(this));
+			this.addPerformOption(new AddToBasket(this));
+			this.addPerformOption(new RemoveFromBasket(this));
+		}
+		else
+			throw new Error("Could not perform action. Could not identify type.");
+	},
+	
+	getSelected: function()
+	{
+		var selectedValue = null;
+		Array.each(this.performOptions, function(performOption)
+		{
+			if ($(this).get("value") == $(performOption).get("value"))
+			{
+				selectedValue = performOption;
+				return;
+			}
+		}.bind(this));
+		if (!selectedValue)
+			throw new Error("No value was selected.");
+		return selectedValue;
+	},
+	
+	perform: function()
+	{
+		this.getSelected().doAction();
+		this.mainWindow.resetChecked();
+	},
+});
+
+var ActionOption = new Class(
+{
+	initialize: function(selectParent)
+	{
+		this.selectParent = selectParent;
+		this.element = new Element('option');
+		this.setupDomElements();
+	},
+	
+	toElement: function() { return this.element; },
+
+});
+
+var AddToSelected = new Class(
+{
+	Extends: ActionOption,
+	initialize: function(selectParent)
+	{
+		this.parent(selectParent);
+	},
+	
+	setupDomElements: function()
+	{
+		$(this).set("value", "AddToSelected");
+		$(this).set("text", "Add to selected");
+	},	
+	
+	doAction: function()
+	{
+		this.selectParent.mainWindow.selectChecked(true);
+	},
+});
+
+var RemoveFromSelected = new Class(
+{
+	Extends: ActionOption,
+	initialize: function(selectParent)
+	{
+		this.parent(selectParent);
+	},
+	
+	setupDomElements: function()
+	{
+		$(this).set("value", "RemoveFromSelected");
+		$(this).set("text", "Remove from selected");
+	},	 
+	
+	doAction: function()
+	{
+		this.selectParent.mainWindow.selectChecked(false);
+	},
+});
+
+var AddToBasket = new Class(
+{
+	Extends: ActionOption,
+	initialize: function(selectParent)
+	{
+		this.parent(selectParent);
+	},
+	
+	setupDomElements: function()
+	{
+		$(this).set("value", "AddToBasket");
+		$(this).set("text", "Add to basket");
+	},	
+	
+	doAction: function()
+	{
+		this.selectParent.mainWindow.toBasketChecked(true);
+	},
+});
+
+var RemoveFromBasket = new Class(
+{
+	Extends: ActionOption,
+	initialize: function(selectParent)
+	{
+		this.parent(selectParent);
+	},
+	
+	setupDomElements: function()
+	{
+		$(this).set("value", "RemoveFromBasket");
+		$(this).set("text", "Remove from basket");
+	},	
+	
+	doAction: function()
+	{
+		this.selectParent.mainWindow.toBasketChecked(false);
+	},
+});
+
+
+var Filter = new Class(
+{
+	Implements: Options,
+	options:
+	{
+		defaultText : 'Filter hit(s)'
+	},
+	initialize: function(elementId, mainWindow, options)
+	{
+		this.setOptions(options);
+		this.mainWindow = mainWindow;
+		this.element = $(elementId);
+		$(this).setStyle("color", "#bbb");
+		$(this).set("value", this.options.defaultText);
+		this.attach();
+	},
+	
+	reset: function()
+	{
+		$(this).set("value", this.options.defaultText);
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			blur: function()
+			{	
+				$(this).setStyle("color", "#bbb");
+				$(this).setStyles({
+					"border-color" : "#DDD",
+					"border-width" : "2px",
+					"border-style" : "solid"
+				});
+				if ($(this).get("value") == "")
+					$(this).set("value", this.options.defaultText);
+			}.bind(this),
+			focus: function()
+			{
+				$(this).setStyle("color", "#000");
+				$(this).setStyles({
+					"border-color" : "73A6FF",
+					"border-width" : "2px",
+					"border-style" : "solid"
+				});
+				if ($(this).get("value") == this.options.defaultText)
+					$(this).set("value", "");
+			}.bind(this),
+			keyup: function()
+			{
+				if ($(this).get("value").length >= 1)
+				{
+					this.filter();
+				}
+				else if ($(this).get("value").length == 0)
+				{
+					Array.each(this.mainWindow.rows, function(row)
+					{
+						row.show();
+					}.bind(this));
+					this.mainWindow.resetFilterInfo();
+				}
+				
+			}.bind(this),
+		});
+	},	
+
+	filter: function()
+	{
+		input = $(this).get("value").toLowerCase();
+		var afterFilter = 0;
+		Array.each(this.mainWindow.rows, function(row)
+		{
+			if (!row.data.toLowerCase().contains(input))
+				row.hide(); 
+			else
+			{
+				row.show();
+				afterFilter++;
+			}			
+		}.bind(this));
+		this.mainWindow.updateFilterInfo(afterFilter);
+	},
+	
+	toElement: function()
+	{
+		return this.element;
+	},
+});
+	
+var Row = new Class(
+{
+	initialize: function(parentMainWindow, data, collection)
+	{
+		this.parentMainWindow = parentMainWindow;
+		this.data = data;
+		this.collection = collection;
+	},
+	
+	isInFilter: function()
+	{
+		if (this.collection.getValues().contains(this.data))
+			return true;
+		else
+			return false;
+	},
+	
+	show: function()
+	{
+		$(this).setStyle("display", "block");
+	},
+	
+	hide: function()
+	{
+		$(this).setStyle("display", "none");
+	},
+	
+	detach: function()
+	{
+		$(this).removeEvents();
+	},
+	
+	check: function(checkThis)
+	{
+		$(this.checkbox).set("checked", checkThis);
+	},
+	
+	isChecked: function()
+	{
+		return ($(this.checkbox).get("checked"));
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var DatabaseRow = new Class(
+{
+	Extends: Row,
+	initialize: function(parentMainWindow, data, collection)
+	{
+		this.parent(parentMainWindow, data, collection);
+		this.setupDomElements();
+		this.attach();
+		this.loaded = false;
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'Row' });		
+		this.headerDiv = new Element('div');
+
+		this.checkbox = new Element('input', { 'type' : 'checkbox' });
+		this.name = new Element('span', { 'class' : 'RowDatabase', 'text' : this.data });
+	
+		$(this.headerDiv).inject($(this));
+		
+		$(this.checkbox).inject($(this.headerDiv));
+		$(this.name).inject($(this.headerDiv));
+
+	},
+	
+	attach: function()
+	{
+		
+	},
+	
+});
+
+var TableRow = new Class(
+{
+	Extends: Row,
+	initialize: function(parentMainWindow, data, collection)
+	{	
+		this.parent(parentMainWindow, data, collection);
+		
+		var dataBreakdown = this.data.split('.');
+		this.database = dataBreakdown[0];
+		this.table = dataBreakdown[1];	
+		this.loaded = false;		
+		this.setupDomElements();
+		this.spinner = new Spinner($(this.basketDiv), { message: "Fetching tables from database...", class : "spinner" } );
+		this.attach();		
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'Row' });		
+		
+		this.headerDiv = new Element('div');
+		this.basketDiv = new Element('div', { 'class' : 'BasketDiv' } );
+		
+		this.checkbox = new Element('input', { 'type' : 'checkbox' });
+		this.databaseColumn = new Element('span', { 'class' : 'RowDatabase', 'text' : this.database } );
+		this.name = new Element('span', { 'class' : 'RowTable', 'text' : this.table });	
+
+		$(this.headerDiv).inject($(this));
+		$(this.basketDiv).inject($(this));
+		
+		$(this.checkbox).inject($(this.headerDiv));
+		$(this.databaseColumn).inject($(this.headerDiv));
+		$(this.name).inject($(this.headerDiv));
+		$(this.basketDiv).setStyle("display", "none");
+		//if (this.parentMainWindow.main.basket.isInBasket(data))
+		//	$(this.element).setStyle("background-color", "#95C8FF");
+	},
+	
+	attach: function()
+	{
+		// $(this.name).addEvents(
+		// {
+			// "mouseenter" : function()
+			// {
+				// $(this.name).setStyle("cursor", "pointer");
+			// }.bind(this),
+			// "mouseleave" : function()
+			// {
+				// $(this.name).setStyle("cursor", "default");
+			// }.bind(this),
+			// "click": function()
+			// {
+				// this.showBasket();
+				// this.populateBasket();
+			// }.bind(this)
+		// });
+	},
+	
+	showBasket: function()
+	{
+		if ($(this.basketDiv).getStyle("display") == "none")
+		{
+			$(this.basketDiv).setStyle("display", "block");
+			if (!this.loaded)
+			{
+				var data = 
+				{
+					"database" : this.data,
+					"type" : "column",
+					"notcontainer" : 1
+				};			
+				this.spinner.show();
+				this.parentMainWindow.main.dataHandler.readData(data, this.handleResults.bind(this));		
+			}
+			this.loaded = true;
+			
+		}
+		else
+		{
+			$(this.basketDiv).setStyle("display", "none");
+		}
+	},
+	
+	populateBasket: function()
+	{
+		
+	},
+	
+	handleResults: function(result)
+	{
+		this.spinner.hide();
+		// Check which of these are found in the basket.
+		var existsInBasket;
+		Array.each(result, function(fetchedColumn) 
+		{
+			console.log(fetchedColumn);
+			// existsInBasket = Window.main.basket.existsInBasket(fetchedColumn);
+			// if (existsInBasket)
+			// {
+				// this.drawTable(Window.main.basket.getBasketItem(fetc));
+			// }
+		}.bind(this));
+	}	
+});
+
+var ColumnRow = new Class(
+{
+	Extends: Row,
+	initialize: function(parentMainWindow, data, collection)
+	{
+		this.parent(parentMainWindow, data, collection);
+
+		var dataBreakdown = this.data.split('.');
+		this.database = dataBreakdown[0];
+		this.table = dataBreakdown[1];
+		this.column = dataBreakdown[2];
+		this.setupDomElements();
+		this.attach();
+		this.updateAddRemove();
+	},
+
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'Row' });		
+		
+		this.headerDiv = new Element('div');
+		this.checkbox = new Element('input', { 'type' : 'checkbox' });
+		this.databaseColumn = new Element('span', { 'class' : 'RowDatabase', 'text' : this.database });
+		this.tableColumn = new Element('span', { 'class' : 'RowDatabase', 'text' : this.table });
+		this.name = new Element('span', { 'class' : 'RowColumn', 'text' : this.column });
+		
+		this.basketDiv = new Element('div', { 'class' : 'BasketDiv' } );
+		
+		$(this.headerDiv).inject($(this));
+		$(this.basketDiv).inject($(this));
+		
+		$(this.checkbox).inject($(this.headerDiv));
+		$(this.databaseColumn).inject($(this.headerDiv));
+		$(this.tableColumn).inject($(this.headerDiv));
+		$(this.name).inject($(this.headerDiv));
+		
+		$(this.basketDiv).setStyle("display" , "none");		
+		
+		this.aggregationDiv = new Aggregation(this);
+		this.conditionsDiv = new Condition(this);
+		this.addDiv = new Element('div', { 'class' : 'ColumnAdd'  });
+		
+		$(this.aggregationDiv).inject($(this.basketDiv));
+		$(this.conditionsDiv).inject($(this.basketDiv));
+		$(this.addDiv).inject($(this.basketDiv));
+		// Basket.
+		
+		// Add/Remove part.
+		this.addButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Add to basket' });
+		this.removeButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Remove from basket' });
+		$(this.addButton).inject($(this.addDiv));
+		$(this.removeButton).inject($(this.addDiv));
+		
+		this.updateAddRemove();
+	},
+
+	attach: function()
+	{	
+		$(this.name).addEvents(
+		{
+			'mouseenter': function()
+			{
+				$(this.name).setStyle("cursor" ,  "pointer" );
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this.name).setStyle("cursor" , "default");
+			}.bind(this),
+			'click': function()
+			{	
+				this.toggleBasket();
+			}.bind(this)
+		});
+		$(this.addButton).addEvents(
+		{
+			'mouseenter': function()
+			{
+				$(this.addButton).setStyle("cursor" ,  "pointer" );
+				$(this.addButton).setStyle("text-decoration" ,  "underline" );
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this.addButton).setStyle("cursor" , "default");
+				$(this.addButton).setStyle("text-decoration" ,  "none" );
+			}.bind(this),
+			'click': function()
+			{	
+				this.parentMainWindow.main.basket.addItem(this.data);
+				this.updateAddRemove();
+			}.bind(this)
+		});
+		$(this.removeButton).addEvents(
+		{
+			'mouseenter': function()
+			{
+				$(this.removeButton).setStyle("cursor" ,  "pointer" );
+				$(this.removeButton).setStyle("text-decoration" ,  "underline" );
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this.removeButton).setStyle("cursor" , "default");
+				$(this.removeButton).setStyle("text-decoration" ,  "none" );
+			}.bind(this),
+			'click': function()
+			{	
+				this.parentMainWindow.main.basket.removeItem(this.data);
+				this.updateAddRemove();
+			}.bind(this)
+		});
+	},
+	
+	updateAddRemove: function()
+	{
+		this.isInBasket = this.parentMainWindow.main.basket.isInBasket(this.data);
+		if (this.isInBasket)
+		{
+			$(this.addButton).setStyle("display", "none");
+			$(this.removeButton).setStyle("display", "inline");
+		}
+		else
+		{
+			$(this.removeButton).setStyle("display", "none");
+			$(this.addButton).setStyle("display", "inline");
+		}
+	},
+	
+	toggleBasket: function()
+	{	if ($(this.basketDiv).getStyle("display") == "none")
+			$(this.basketDiv).setStyle("display" ,"block");
+		else
+			$(this.basketDiv).setStyle("display" ,"none");
+	},
+});
+
+var Aggregation = new Class(
+{
+	initialize: function()
+	{
+		this.element = new Element('div', { 'class' : 'Aggregation' });
+		this.aggregationActive = false;
+		this.optionsArray = new Array();
+		this.setupDomElements();
+		this.attach();
+	},
+	
+	setupDomElements: function()
+	{	
+		this.activateAggregation = new Element('span', { 'id' : 'ActivateAggregation', 'text' : 'Aggregation' });
+		
+		this.aggregationSelect = new Element('select');
+		this.optionsArray.push(new Element('option', { 'value' : 'None', 'text' : 'None' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Sum (SUM)', 'text' : 'Sum (SUM)' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Average (AVG)', 'text' : 'Average (AVG)' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Minimum (MIN)', 'text' : 'Minimum (MIN)' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Maximum (MAX)', 'text' : 'Maximum (MAX)' }));
+		
+		Array.each(this.optionsArray, function(option)
+		{
+			$(option).inject($(this.aggregationSelect));
+		}.bind(this));
+		
+		this.aggregationInfo = new Element('span', { 'id' : 'aggregationInfo' });
+		
+		$(this.activateAggregation).inject($(this));
+		$(this.aggregationSelect).inject($(this));
+		$(this.aggregationInfo).inject($(this));
+	},
+	
+	attach: function()
+	{	
+		 $(this.aggregationSelect).addEvents(
+		{
+			"change" : function()
+			{
+				if ($(this.aggregationSelect).get("value") != "None")
+				{
+					$(this.aggregationInfo).set("text", "Aggregaton selected. Choose how group the results in the Tree View of the basket.");
+				}
+				else 
+					$(this.aggregationInfo).set("text", "");
+			}.bind(this),
+		}); 
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var Condition = new Class(
+{
+	initialize: function()
+	{
+		this.element = new Element('div', { 'class' : 'Conditions' });
+		this.setupDomElements();
+		this.attach();
+	},
+	
+	setupDomElements: function()
+	{
+		this.conditionHeaderDiv = new Element('div', { 'class' : 'conditionHeaderDiv' });
+		this.conditionHeader = new Element('span', { 'id' : 'ConditionHeader', 'text' : 'Conditions' });
+		//this.conditionHeaderHelp = new Element('span', { 'id' : 'ConditionHeaderHelp' ,'text' :  'Conditions for wanted value. (WHERE or HAVING)' });
+		
+		this.selection = new Selection(this);
+		
+		this.anotherBox = new Element('div', { 'class' : 'AnotherBox' });
+		this.addOrAnotherBox = new Element('span', { 'class' : 'AndOr', 'text' : 'Or' });
+		this.addAndAnotherBox = new Element('span', { 'class' : 'AndOr', 'text' : 'And' });
+		
+		$(this.conditionHeaderDiv).inject($(this));
+		$(this.conditionHeader).inject($(this.conditionHeaderDiv));
+		//$(this.conditionHeaderHelp).inject($(this.conditionHeaderDiv));
+		
+		$(this.selection).inject($(this));		
+
+		$(this.anotherBox).inject($(this));
+		$(this.addOrAnotherBox).inject($(this.anotherBox));
+		$(this.addAndAnotherBox).inject($(this.anotherBox));		
+	},
+	
+	attach: function()
+	{
+		$(this.addOrAnotherBox).addEvents(
+		{
+			"mouseenter" : function()
+			{
+				$(this.addOrAnotherBox).setStyles(
+				{
+					"cursor" : "pointer",
+					"text-decoration" : "underline"
+				});
+			}.bind(this),
+			"mouseleave" : function()
+			{
+				$(this.addOrAnotherBox).setStyles(
+				{
+					"cursor" : "default",
+					"text-decoration" : "none"
+				});
+			}.bind(this),
+			"click" : function()
+			{
+				console.log("Add or.");
+			}
+		});
+		$(this.addAndAnotherBox).addEvents(
+		{
+			"mouseenter" : function()
+			{
+				$(this.addAndAnotherBox).setStyles(
+				{
+					"cursor" : "pointer",
+					"text-decoration" : "underline"
+				});
+			}.bind(this),
+			"mouseleave" : function()
+			{
+				$(this.addAndAnotherBox).setStyles(
+				{
+					"cursor" : "default",
+					"text-decoration" : "none"
+				});
+			}.bind(this),
+			"click" : function()
+			{
+				console.log("Add And.");
+			}
+		});
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var Selection = new Class(
+{
+	initialize: function(parentCondition)
+	{
+		this.parentCondition = parentCondition;
+		this.setupDomElements();
+		this.attach();
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'SelectDiv' });	
+		this.select = new Element('select', { 'class' : 'conditionSelect' });
+		this.optionsArray = new Array();
+		
+		this.optionsArray.push(new Element('option', { 'value' : 'No condition (choose all)', 'text' : 'No condition (choose all)' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Begins with text', 'text' : 'Begins with text' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Ends with text', 'text' : 'Ends with text' }));
+		this.optionsArray.push(new Element('option', { 'value' : 'Contains text', 'text' : 'Contains text' }));
+		this.optionsArray.push(new Element('option', { 'value' : '> (more than)', 'text' : '> (more than)' }));
+		this.optionsArray.push(new Element('option', { 'value' : '< (less than)', 'text' : '< (less than)' }));
+		this.optionsArray.push(new Element('option', { 'value' : '>= (more or equal to)', 'text' : '>= (more or equal to)' }));
+		this.optionsArray.push(new Element('option', { 'value' : '<= (less or equal to)', 'text' : '<= (less or equal to)' }));
+		this.optionsArray.push(new Element('option', { 'value' : '== (equal to)', 'text' : '== (equal to)' }));
+		this.optionsArray.push(new Element('option', { 'value' : '!= (not equal to)', 'text' : '!= (not equal to)' }));
+		
+		Array.each(this.optionsArray, function(option)
+		{
+			$(option).inject($(this.select));
+		}.bind(this));
+		
+		this.conditionInputBox = new Element('input', { 'class' : 'ConditionInput', 'type' : 'input', 'name' : 'ConditionInput' });
+		this.addOr = new Element('span', { 'class' : 'AndOr', 'text' : 'Or' });
+		this.addAnd = new Element('span', { 'class' : 'AndOr', 'text' : 'And' });
+		
+		$(this.select).inject($(this));
+		$(this.conditionInputBox).inject($(this));
+		$(this.addOr).inject($(this));
+		$(this.addAnd).inject($(this));				
+	},
+	
+	attach: function() 
+	{ 
+		$(this.addOr).addEvents(
+		{
+			"mouseenter" : function()
+			{
+				$(this.addOr).setStyles(
+				{
+					"cursor" : "pointer",
+					"text-decoration" : "underline"
+				});
+			}.bind(this),
+			"mouseleave" : function()
+			{
+				$(this.addOr).setStyles(
+				{
+					"cursor" : "default",
+					"text-decoration" : "none"
+				});
+			}.bind(this),
+			"click" : function()
+			{
+				console.log("Add or.");
+			}
+		});
+		$(this.addAnd).addEvents(
+		{
+			"mouseenter" : function()
+			{
+				$(this.addAnd).setStyles(
+				{
+					"cursor" : "pointer",
+					"text-decoration" : "underline"
+				});
+			}.bind(this),
+			"mouseleave" : function()
+			{
+				$(this.addAnd).setStyles(
+				{
+					"cursor" : "default",
+					"text-decoration" : "none"
+				});
+			}.bind(this),
+			"click" : function()
+			{
+				console.log("Add And.");
+			}
+		});
+	},
+	
+	toElement: function() { return this.element; },
+});
+	
+var DataHandler = new Class(
+{
+	initialize: function(main)
+	{	
+		this.main = main;
+	},
+	
+	// Read data from the server.
+	readData: function(data, returnFunction) 
+	{
+		var postVariable = "notcontainer=" + data.notcontainer + "&search=" + data.search + "&type=" + data.type + "&database=" + data.database + "&table=" + data.table + "&column=" + data.column + "&browse=1";
+		// Get data from server.
+		var that = this;
+		var readRequest = new Request(
+		{
+			
+			url: "php/readdata.php", 
+			method: 'post',
+			onRequest: function() 
+			{
+				that.main.mainWindow.startSpinner();
+				//console.log("System: Reading data from file..");
+			},
+			onComplete: function(result) 
+			{
+				that.main.mainWindow.stopSpinner();
+				//console.log("System: Reading complete. Managing results..");		
+				//this.sendResultsToMain(result);
+				returnFunction(result);
+			}.bind(this),
+			onSuccess: function() 
+			{
+				//console.log("Success!");
+			},
+			onError: function() 
+			{ 
+				throw Error("Error during read request in domready.js.");
+			}
+		});
+		readRequest.send(postVariable);
+	},
+	
+	sendResultsToMain: function(result)
+	{
+		this.main.setQueryResult(result);
+	},	
+});
+	
+var InputField = new Class(
+{
+	Implements: Options,
+	options: 
+	{
+		idle    : 'idleField',
+		focus   : 'focusField',
+		dbInfo  : null,
+		defaultText : ''
+	},
+	
+	initialize: function(main, elementId, options)
+	{
+		this.setOptions(options);
+		this.main = main;
+		this.element = $(elementId);
+		$(this).addClass(this.options.idle);
+		$(this).set("value", this.options.defaultText);
+		
+		return this;
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			focus: function()
+			{
+				$(this).removeClass(this.options.idle);
+				$(this).addClass(this.options.focus);
+				if ($(this).get("value") == this.options.defaultText)
+				{
+					$(this).set("value", '');
+				}
+				else
+				{
+					$(this).select();
+				}
+			}.bind(this),
+			blur: function()
+			{
+				$(this).removeClass(this.options.focus);
+				$(this).addClass(this.options.idle);
+				
+				if ($(this).get("value").trim() == "")
+					$(this).set("value", this.options.defaultText);
+			}.bind(this),
+		});
+		return this;
+	},
+	
+	getValue: function()
+	{
+		if ($(this).get("value") == this.options.defaultText)
+			return "";
+		else
+			return $(this).get("value");
+	},
+	
+	fetchResults: function()
+	{
+		if (!this.options.dbInfo)
+			throw new Error("Cannot try to fetch data. No table or column has been set.");
+		this.main.getData(this.options.dbInfo.table, this.options.dbInfo.column, $(this).get("value"));		
+	},
+	
+	toElement: function() { return this.element; },
+	
+});
+
+var BrowseButton = new Class(
+{
+	initialize: function(main, type, elementId)
+	{
+		this.element = $(elementId);
+		this.main = main;
+		this.type = type;
+		return this;
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			'mouseenter': function()
+			{
+				$(this).setStyle("cursor", "pointer");
+				$(this).setStyle("text-decoration", "underline");
+				
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this).setStyle("cursor", "default");
+				$(this).setStyle("text-decoration", "none");
+			}.bind(this),
+			'click' : function(e)
+			{			
+				e.stop();
+				this.main.readData(this.type, true);				
+			}.bind(this),
+		});
+		return this;
+	},
+	
+	setText: function(text)
+	{
+		$(this).set("text", text);
+	},
+	
+	getType: function() { return this.type; },
+	
+		toElement: function() { return this.element; },
+});
+
+var DatabaseElementContainer = new Class(
+{
+	initialize: function(parentMain, elementId, collectionFooterId, browseButton)
+	{
+		this.parentMain = parentMain;
+		this.element = $(elementId);
+		this.databaseElements = new Array();
+		this.collectionFooter = $(collectionFooterId);
+		this.browseButton = browseButton;
+		this.expanded = false;
+		
+		this.setupDomElements();
+		this.attach();
+		
+		return this;
+	},
+	
+	setupDomElements: function()
+	{
+		this.rowsDiv = new Element('div', { 'class' : 'collectionRows' });
+		this.buttonsDiv = new Element('div', { 'class' : 'collectionButtons' });
+		this.removeAll = new Element('span', { 'id' : 'collectionFooterRemove', 'class' : 'CollectionFooterButton', 'text' : '' });
+		this.showHideAll = new Element('span', { 'id' : 'collectionFooterShowHide', 'class' : 'CollectionFooterButton', 'text' : '' });
+		
+		$(this.removeAll).inject($(this.buttonsDiv));
+		$(this.showHideAll).inject($(this.buttonsDiv));
+		
+		$(this.rowsDiv).inject($(this));
+		$(this.buttonsDiv).inject($(this));
+	},
+	
+	attach: function()
+	{
+		$(this.removeAll).addEvents({ 'mouseenter' : function() { $(this.removeAll).setStyle("cursor", "pointer"); $(this.removeAll).setStyle("text-decoration", "underline"); }.bind(this), 
+									  'mouseleave' : function() { $(this.removeAll).setStyle("cursor", "default"); $(this.removeAll).setStyle("text-decoration", "none"); }.bind(this),
+									  'click' : function() { this.removeAllRows(); }.bind(this)
+									 });
+		
+		$(this.showHideAll).addEvents({ 'mouseenter' : function() { $(this.showHideAll).setStyle("cursor", "pointer"); $(this.showHideAll).setStyle("text-decoration", "underline"); }.bind(this),
+									    'mouseleave' : function() { $(this.showHideAll).setStyle("cursor", "default"); $(this.showHideAll).setStyle("text-decoration", "none"); }.bind(this),
+									    'click' : function() { this.toggleShowCollection(); }.bind(this)
+									  });
+	},
+	
+	add: function(databaseElement)		
+	{
+		var alreadyExists = Array.some(this.databaseElements, function(existingElement)
+		{	
+			return (databaseElement.name == existingElement.name)
+		});
+		if (alreadyExists)
+			return false;
+		databaseElement.attach();
+		this.databaseElements.push(databaseElement);
+		$(databaseElement).inject($(this.rowsDiv));
+		this.updateBrowseButton();
+		this.updateFooter();
+	},
+	
+	remove: function(databaseElement)
+	{
+		this.databaseElements.erase(databaseElement);
+		$(databaseElement).destroy();
+		this.updateBrowseButton();
+		this.updateFooter();
+	},
+	
+	removeAllRows: function()
+	{	
+		if (this.expanded)
+			this.toggleShowCollection();
+			
+		Array.each(this.databaseElements, function(databaseElement)
+		{
+			$(databaseElement).destroy();
+		});
+		this.databaseElements.empty();
+		this.updateBrowseButton();
+		this.updateFooter();
+		
+	},
+	
+	toggleShowCollection: function()
+	{	
+		if (this.expanded)
+		{
+			// Get the cartesian position of this element.
+			var position = $(this).getPosition();
+			var size = $(this).getSize();
+					
+			this.expanded = false;
+
+			var rowSize = $(this.rowsDiv).getSize();
+			$(this.rowsDiv).setStyle("max-height",  "47px");
+					
+			$(this).addClass("collection");			
+			$(this.showHideAll).set("text", "Expand");
+			
+			(function(){ 
+				$(this).setStyles({
+					"position" : "relative",
+					"top" : "7px",
+					"left" : "0px",
+					"width" : "135px",		
+					"z-index" : 1,
+					"border-radius" : 0,
+					"max-height" : "68px",
+					"padding-bottom" : "0px"
+				});
+				$(this.newCollection).destroy();
+			}.bind(this)).delay(200);
+		}
+		else
+		{
+			this.expanded = true;
+			// Change text
+			this.newCollection = $(this).clone();
+			$(this.newCollection).inject($(this), 'after');
+			$(this.newCollection).setStyle("visibility", "hidden");
+			
+			// Get the cartesian position of this element.
+			var position = $(this).getPosition();
+			var size = $(this).getSize();
+			
+			var rowSize = $(this.rowsDiv).getSize();
+			$(this.rowsDiv).setStyle("max-height", rowSize.y + 195);
+			// Set style-position to absolute. Set position to the same as found above.
+			$(this).setStyles({
+				"position" : "absolute",
+				"z-index"  : "40",
+				"top"      : position.y,
+				"left"     : position.x,		
+				"border-radius" : "0em 0em 1em 1em",
+				//"max-height" : size.y + 200,
+				"padding-bottom" : "3px"
+			});
+			//$(this).setStyle("max-height", size.y + 200);
+			var extractCollectionFx = new Fx.Tween($(this), {
+				duration: 200,
+				transition: 'bounce',
+				property: 'max-height'
+			}).start(size.y, size.y + 200);
+
+			$(this.showHideAll).set("text", "Contract");
+		}		
+	},
+	
+	removeJustText: function(text)
+	{
+		Array.each(this.databaseElements, function(databaseElement)
+		{
+			if (databaseElement.name == text)
+			{
+				this.remove(databaseElement);
+				return;
+			}
+		}.bind(this));
+	},
+	
+	updateFooter: function()
+	{
+		if (this.databaseElements.length > 2)
+		{
+			this.removeAll.set("text", "Remove all"); 
+			this.showHideAll.set("text", "Expand");
+			// show "show all" text if it is not there already.
+		}
+		else if (this.databaseElements.length >= 0 && this.databaseElements.length <= 2)
+		{
+			if (this.showHideAll.get("text").length > 0)
+				this.showHideAll.set("text", "");
+			
+			if (this.removeAll.get("text").length > 0)
+				this.removeAll.set("text", "");	
+		}	
+	},
+	
+	updateBrowseButton: function()
+	{
+		if (this.browseButton == null)
+			return false;
+		else if (this.browseButton.getType() == "table") 
+		{
+			if (this.databaseElements.length == 0)
+				this.browseButton.setText("");
+			if (this.databaseElements.length == 1)
+				this.browseButton.setText("show tables in the chosen database.");
+			else if (this.databaseElements.length > 1)
+				this.browseButton.setText("show tables in the chosen " + this.databaseElements.length + " databases");
+		}
+		else if (this.browseButton.getType() == "column")
+		{
+			if (this.databaseElements.length == 0)
+				this.browseButton.setText("");
+			if (this.databaseElements.length == 1)
+				this.browseButton.setText("show columns in the chosen table.");
+			else if (this.databaseElements.length > 1)
+				this.browseButton.setText("show columns in the chosen " + this.databaseElements.length + " tables");
+		}
+	},
+	
+	getValues: function() { return this.databaseElements; },
+	
+	toElement: function() { return this.element; },
+
+});	
+	
+
+var DatabaseElement = new Class(
+{	
+	Implements: Options,
+	options: {
+		"maxNameLength" : 11 // must be above 2.
+	},
+	initialize: function(parentDatabaseElementContainer, name, options)
+	{
+		this.setOptions(options);
+		this.parentDatabaseElementContainer = parentDatabaseElementContainer;
+		this.name = name;
+		
+		var dataBreakdown = this.name.split('.');
+		if (dataBreakdown.length == 1)
+		{
+			this.type = "database";
+			this.name = dataBreakdown[0];
+			this.title = "Database: " + dataBreakdown[0];
+		}
+		else if (dataBreakdown.length == 2)
+		{
+			this.type = "table";
+			this.name = dataBreakdown[1];
+			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1];
+		}
+		else if (dataBreakdown.length == 3)
+		{
+			this.type = "column";
+			this.name = dataBreakdown[2];
+			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1] + " Column: " + dataBreakdown[2];
+		}
+		else
+			throw new Error("Could not idfentify type of database element.");
+		this.setupDomElements();
+		
+		return this;
+	},
+	
+	setupDomElements: function()
+	{
+		
+		this.setElement(new Element('span', { 'class' : 'DatabaseElement', 'title' : this.title } ));
+		
+		if (this.name.length > this.options.maxNameLength) 
+			this.showedName = this.name.substring(0, this.options.maxNameLength - 3) + "...";
+		else
+			this.showedName = this.name;
+		this.text = new Element('span', { 'class' : 'DataBaseElementText', 'text' : this.showedName });
+		this.remove = new Element('span', { 'class' : 'DatabaseElementRemove', 'text' : 'x' });
+		
+		$(this.remove).inject($(this));
+		$(this.text).inject($(this));		
+	},
+	
+	attach: function()
+	{
+		$(this.remove).addEvents(
+		{
+			"mouseenter" : function()
+			{
+				$(this.remove).setStyle("cursor", "pointer");
+				$(this.remove).setStyle("background-color", "#666");
+			}.bind(this),
+			"mouseleave" : function()
+			{
+				$(this.remove).setStyle("cursor", "default");
+				$(this.remove).setStyle("background-color", "");
+			}.bind(this),
+			"click" : function()
+			{
+				this.parentDatabaseElementContainer.remove(this);
+			}.bind(this)
+		});
+		
+		$(this).addEvents(
+		{
+			"mouseenter" : function() { $(this).highlight("#5184CC"); }.bind(this),
+		});
+		return this;
+	},
+	
+	setElement: function(element)
+	{
+		this.element = element;
+	},
+	
+	getName: function()
+	{
+		return this.name;
+	},
+	
+	toElement: function() { return this.element },	
+});
+
+var CollectionAdd = new Class(
+{
+	initialize: function(parentMain, collection, inputField, elementId)
+	{
+		this.parentMain = parentMain;
+		this.collection = collection;
+		this.inputField = inputField;
+		this.element = $(elementId);
+		
+		this.setupDomElements();
+		
+		return this;
+	},
+	
+	setupDomElements: function()
+	{
+		plusSVG = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
+		//rightSVG = "M10.129,22.186 16.316,15.999 10.129,9.812 13.665,6.276 23.389,15.999 13.665,25.725z";
+		
+		this.raphaelHolder = new Element('span', { 'class' : 'RaphaelHolder' });
+		$(this.raphaelHolder).inject($(this));
+		
+		var paper = Raphael($(this.raphaelHolder), 15, 23);	
+		this.path = paper.path(plusSVG).attr({fill: "#666", stroke: "none"}).scale(0.7).translate(-8, 0);
+	
+	},
+	
+	attach: function() 
+	{
+		$(this).addEvents(
+		{
+			'mouseenter' : function()
+			{	
+				$(this).setStyle("cursor", "pointer");
+				this.path.animate({ fill: "#000" }, 300);
+			}.bind(this),
+			'mouseleave' : function()
+			{
+				$(this).setStyle("cursor", "default");
+				$(this).setStyle("box-shadow", "1px 1px 3px #333");		
+				this.path.animate({ fill: "#666" }, 300);				
+			}.bind(this),
+			"mousedown": function()
+			{
+				$(this).setStyle("box-shadow", "0px 0px 0px #333");
+				this.add();
+			}.bind(this),
+			"mouseup" : function()
+			{
+				$(this).setStyle("box-shadow", "1px 1px 3px #333");			
+			}.bind(this)
+		});
+		return this;
+	},
+	
+	add: function()
+	{
+		if ($(this.inputField).get("value") != this.inputField.options.defaultText)
+		{	
+			this.collection.add(new DatabaseElement(this.collection, $(this.inputField).get("value")));
+			$(this.inputField).set("value", this.inputField.options.defaultText);
+		}	
+	},
+	
+	toElement: function() { return this.element; },	
+});	
+	
+var Submit = new Class(
+{
+	initialize: function(main, collection, type, elementId)
+	{
+		this.main = main;
+		this.collection = collection;
+		this.type = type;
+		this.element = $(elementId);
+		this.setupDomElements();
+		
+		return this;
+	},
+	
+	setupDomElements: function()
+	{
+		rightSVG = "M10.129,22.186 16.316,15.999 10.129,9.812 13.665,6.276 23.389,15.999 13.665,25.725z";
+		
+		this.raphaelHolder = new Element('span', { 'class' : 'RaphaelHolder' });
+		$(this.raphaelHolder).inject($(this));
+		
+		paper = Raphael($(this.raphaelHolder), 15, 23);	
+		this.path = paper.path(rightSVG).attr({fill: "#666", stroke: "none"}).scale(0.7).translate(-8, 0);
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			'mouseenter' : function()
+			{
+				$(this).setStyle("cursor", "pointer");
+				this.path.animate({ fill: "#000" }, 300);
+			}.bind(this),
+			'mouseleave' : function()
+			{
+				$(this).setStyle("cursor", "default");
+				$(this).setStyle("box-shadow", "1px 1px 3px #333");		
+				this.path.animate({ fill: "#666" }, 300);
+			}.bind(this),
+			"mousedown": function()
+			{
+				$(this).setStyle("box-shadow", "0px 0px 0px #333");
+				this.main.showData(this.collection, this.type);
+			}.bind(this),
+			"mouseup" : function()
+			{
+				$(this).setStyle("box-shadow", "1px 1px 3px #333");			
+			}.bind(this)
+		});
+		return this;
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var Basket = new Class(
+{
+	initialize: function(main, elementId)
+	{
+		this.element = $(elementId);	
+		this.main = main;
+		this.currentView = null;
+		this.shownViews = new Array();
+		this.setupDomElements();
+		this.itemArray = new Array();
+	},
+	
+	setupDomElements: function()
+	{	
+		this.basketBody = $('basket-body');
+		
+		basketHeader = new BasketHeader('basket-header', this);
+		
+		basketHeader.addBasketPart('views');
+		basketHeader.addBasketPart('custom');
+		basketHeader.addBasketPart('submit');
+		
+		basketHeader.addBasketView(new BasketTreeView(basketHeader, "M6.812,17.202l7.396-3.665v-2.164h-0.834c-0.414,0-0.808-0.084-1.167-0.237v1.159l-7.396,3.667v2.912h2V17.202zM26.561,18.875v-2.913l-7.396-3.666v-1.158c-0.358,0.152-0.753,0.236-1.166,0.236h-0.832l-0.001,2.164l7.396,3.666v1.672H26.561zM16.688,18.875v-7.501h-2v7.501H16.688zM27.875,19.875H23.25c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2h4.625c1.104,0,2-0.896,2-2v-4.625C29.875,20.771,28.979,19.875,27.875,19.875zM8.125,19.875H3.5c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2h4.625c1.104,0,2-0.896,2-2v-4.625C10.125,20.771,9.229,19.875,8.125,19.875zM13.375,10.375H18c1.104,0,2-0.896,2-2V3.75c0-1.104-0.896-2-2-2h-4.625c-1.104,0-2,0.896-2,2v4.625C11.375,9.479,12.271,10.375,13.375,10.375zM18,19.875h-4.625c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2H18c1.104,0,2-0.896,2-2v-4.625C20,20.771,19.104,19.875,18,19.875z", "Tree view"), 'views');
+		basketHeader.addBasketView(new BasketConnectionView(basketHeader, "M18.386,16.009l0.009-0.006l-0.58-0.912c1.654-2.226,1.876-5.319,0.3-7.8c-2.043-3.213-6.303-4.161-9.516-2.118c-3.212,2.042-4.163,6.302-2.12,9.517c1.528,2.402,4.3,3.537,6.944,3.102l0.424,0.669l0.206,0.045l0.779-0.447l-0.305,1.377l2.483,0.552l-0.296,1.325l1.903,0.424l-0.68,3.06l1.406,0.313l-0.424,1.906l4.135,0.918l0.758-3.392L18.386,16.009z M10.996,8.944c-0.685,0.436-1.593,0.233-2.029-0.452C8.532,7.807,8.733,6.898,9.418,6.463s1.594-0.233,2.028,0.452C11.883,7.6,11.68,8.509,10.996,8.944z", "Connection view"), 'views');
+		basketHeader.addBasketView(new BasketPseudoView(basketHeader, "M23.024,5.673c-1.744-1.694-3.625-3.051-5.168-3.236c-0.084-0.012-0.171-0.019-0.263-0.021H7.438c-0.162,0-0.322,0.063-0.436,0.18C6.889,2.71,6.822,2.87,6.822,3.033v25.75c0,0.162,0.063,0.317,0.18,0.435c0.117,0.116,0.271,0.179,0.436,0.179h18.364c0.162,0,0.317-0.062,0.434-0.179c0.117-0.117,0.182-0.272,0.182-0.435V11.648C26.382,9.659,24.824,7.49,23.024,5.673zM25.184,28.164H8.052V3.646h9.542v0.002c0.416-0.025,0.775,0.386,1.05,1.326c0.25,0.895,0.313,2.062,0.312,2.871c0.002,0.593-0.027,0.991-0.027,0.991l-0.049,0.652l0.656,0.007c0.003,0,1.516,0.018,3,0.355c1.426,0.308,2.541,0.922,2.645,1.617c0.004,0.062,0.005,0.124,0.004,0.182V28.164z", "PseudoSQL view"), 'views');
+		basketHeader.addBasketView(new BasketSqlView(basketHeader, "M2.021,9.748L2.021,9.748V9.746V9.748zM2.022,9.746l5.771,5.773l-5.772,5.771l2.122,2.123l7.894-7.895L4.143,7.623L2.022,9.746zM12.248,23.269h14.419V20.27H12.248V23.269zM16.583,17.019h10.084V14.02H16.583V17.019zM12.248,7.769v3.001h14.419V7.769H12.248z", 'Customization view'), 'custom');
+		basketHeader.addBasketView(new BasketSubmitView(basketHeader, "M2.379,14.729 5.208,11.899 12.958,19.648 25.877,6.733 28.707,9.561 12.958,25.308z", 'Configure and submit'), 'submit');
+		
+		basketHeader.attach();
+		basketHeader.selectView(basketHeader.views[0]);
+	},
+	
+	addItem: function(data)
+	{
+		var dataBreakdown = data.split('.');
+		if (dataBreakdown.length == 1)
+			var newItem = DatabaseBasketItem({ "database" : dataBreakdown[0] });
+		else if (dataBreakdown.length == 2)
+			var newItem = TableBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1] });
+		else if (dataBreakdown.length == 3) {
+			var newItem = ColumnBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] });
+		}
+		else
+			throw new Error("Could not identify type when adding a basketitem.");
+			
+		this.itemArray.push(newItem);		
+		this.updateView();
+	},	
+
+	getItems: function() { return this.itemArray; },
+	
+	setView: function(view)
+	{
+		if (this.currentView != null) {
+			this.currentView.hideView(); // turning off the current view.
+		}
+		if (this.shownViews.contains(view))
+		{
+			view.showView(); // making the view visible.
+		}
+		else
+		{
+			$(view.getBasketBodyType()).inject($(this.basketBody)); // creating the view.
+			this.shownViews.push(view);
+		}
+		this.currentView = view; // setting the new view as current view
+	},
+	
+	// Ineffeciency is high.
+	updateView: function()
+	{
+		this.basketBody.getChildren().destroy(); // clearing
+		$(this.currentView.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
+	},
+	
+	isInBasket: function(data)
+	{
+		var dataBreakdown =  data.split('.');
+		if (dataBreakdown.length == 1)
+		{
+			var type = "database";
+			splitData = { "database" : dataBreakdown[0] };
+		}
+		else if (dataBreakdown.length == 2)
+		{
+			var type = "table";
+			splitData = { "database" : dataBreakdown[0], "table" : dataBreakdown[1] };
+		}
+		else if (dataBreakdown.length == 3)
+		{
+			var type = "column";
+			splitData = { "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] };
+		}
+		if (type == "column")
+		{
+			var foundItem = Array.some(this.itemArray, function(item)
+			{
+				return (item.data.column == splitData.column)			
+			}.bind(this));
+		}
+		else
+		{
+			throw new Error("Not column.");
+		}
+		return foundItem;
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var BasketHeader = new Class(
+{
+	initialize: function(elementId, parentBasket)
+	{
+		this.element = $(elementId);
+		this.parentBasket = parentBasket;
+		this.views = new Array();
+		this.parts = new Array();
+	},
+	
+	attach: function() 
+	{
+		Array.each(this.views, function(view)
+		{
+			view.attach();
+		});
+	},
+	
+	detach: function()
+	{
+		Array.each(this.views, function(view)
+		{
+			view.detach();
+		});
+	},
+	
+	addBasketPart: function(partname)
+	{
+		newPart = new Element('span', { 'class' : 'basketviewspan', 'name' : partname } );
+		this.parts.push(newPart);
+		$(newPart).inject($(this));		
+	},
+	
+	addBasketView: function(view, partString)
+	{
+		this.views.include(view);
+		var includeToPart = null;
+		Array.each(this.parts, function(existingPart)
+		{
+			if (existingPart.get("name") == partString)
+			{
+				includeToPart = existingPart;
+				return;
+			}
+		});
+		if (!includeToPart)
+			throw new Error("Did not find part.");
+		$(view).inject($(includeToPart));
+	},
+	
+	removeBasketView: function(view)
+	{
+		this.views.erase(view);
+	},
+	
+	selectView: function(view)
+	{
+		this.deselectAllViews();
+		view.select();
+		this.parentBasket.setView(view);
+	},
+	
+	deselectAllViews: function()
+	{
+		Array.each(this.views, function(view)
+		{
+			this.deselectView(view);
+		}.bind(this));
+	},
+	
+	deselectView: function(view)
+	{
+		view.deselect();
+	},
+	
+	toElement: function() { return this.element; }
+});
+
+var BasketView = new Class(
+{
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parentBasketHeader = parentBasketHeader;
+		this.icon = icon;
+		this.title = title;
+		this.setupDomElements();
+	},
+	
+	setupDomElements: function()
+	{	
+		this.element = new Element('span', { 'class' : 'basketChangeView', 'title' : this.title });
+		paper = Raphael($(this), 30, 30);	
+		this.path = paper.path(this.icon).attr({fill: "#666", stroke: "none", "stroke-width" : 0.5 }).scale(0.7).translate(0, 0);
+	},
+	
+	attach: function()
+	{		
+		$(this).addEvents(
+		{ 
+			"mouseenter" : function() { 
+				$(this).setStyle("cursor", "pointer"); 
+				this.path.animate({ fill: "#111" }, 200); 
+			}.bind(this), 
+			"mouseleave" : function() { 
+				$(this).setStyle("cursor", "default"); 
+				this.path.animate({ fill: "#666" }, 200); 
+			}.bind(this),
+			"click" : function()
+			{
+				this.parentBasketHeader.selectView(this);
+			}.bind(this),
+		});
+	},
+	
+	detach: function()
+	{
+		$(this).removeEvents();
+	},	
+	
+	select: function()
+	{
+		this.path.animate({ "stroke": "#66F" }, 200);
+	},
+	
+	deselect: function()
+	{	
+		this.path.animate({ "stroke" : "none", "fill": "#666" }, 0);
+	},
+	
+	showView: function()
+	{
+		$(this.basketBodyType).setStyle("display", "block");
+	},
+	
+	hideView: function()
+	{
+		$(this.basketBodyType).setStyle("display", "none");
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var BasketTreeView = new Class(
+{
+	Extends: BasketView,
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parent(parentBasketHeader, icon, title);
+	},
+	
+	getBasketBodyType: function() { return this.setupBasketBodyType(); },
+	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		Array.each(this.parentBasketHeader.parentBasket.itemArray, function(item)
+		{
+			$(item).inject($(this.basketBodyType));
+		}.bind(this));
+		
+		return this.basketBodyType;
+	},
+});
+
+var BasketConnectionView = new Class(
+{
+	Extends: BasketView,
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parent(parentBasketHeader, icon, title);
+	},
+	
+	getBasketBodyType: function() { return this.setupBasketBodyType(); },
+	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		
+		return this.basketBodyType;
+	},
+});
+
+var BasketPseudoView = new Class(
+{
+	Extends: BasketView,
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parent(parentBasketHeader, icon, title);
+	},
+	
+	getBasketBodyType: function() { return this.setupBasketBodyType(); },
+	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		
+		return this.basketBodyType;
+	},
+});
+
+var BasketSqlView = new Class(
+{
+	Extends: BasketView,
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parent(parentBasketHeader, icon, title);
+	},
+	
+	getBasketBodyType: function() { return this.setupBasketBodyType(); },
+	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' } );
+
+		var viewHeader = new Element('div', { 'class' : 'BasketBodyHeader notice', 'text' : 'Add comments, your own SQL, or any other type of message in the box(es) below.'} );
+		//$(viewHeader).inject($(this.basketBodyType));
+		
+		var textAreaHolder = new Element('div');
+		$(textAreaHolder).inject($(this.basketBodyType));
+		
+		var flexArea = new Flext(new Element('textarea', { 'class' : 'flext growme growparents customarea', 'height' : 300, 'margin-top':30, 'padding' : 30, 'id' : 'customTextArea' })); 
+		$(flexArea).inject($(textAreaHolder));
+		
+		var addAnother = new Element('div', { 'class' : 'CustomAddAnother', 'text' : '+ Add another comment' });
+		$(addAnother).inject($(this.basketBodyType));
+		$(addAnother).addEvents(
+		{
+			"mouseenter" : function() { $(addAnother).setStyles({ "cursor" : "pointer", "text-decoration" : "underline" }); },
+			"mouseleave" : function() { $(addAnother).setStyles({ "cursor" : "default", "text-decoration" : "none" }); },
+			"click" : function() { 
+				var removal = new Element('span', { 'text' : 'X', "class" : "removeAnother" });	
+				$(removal).inject($(textAreaHolder));
+				var flexArea = new Flext(new Element('textarea', { 'class' : 'flext growme growparents customarea', 'height' : 300, 'margin-top':30, 'padding' : 30, 'id' : 'customTextArea' })); 
+				$(flexArea).inject($(textAreaHolder));		
+
+				$(removal).addEvents({
+					"mouseenter": function() { $(removal).setStyles({"cursor": "pointer", "color" : "#000" }); },
+					"mouseleave": function() { $(removal).setStyles({ "cursor" : "default", "color" : "#999" } ); },
+					"click": function() { $(flexArea).destroy(); $(removal).destroy(); }
+				});
+			}.bind(this),
+		});
+		
+		return this.basketBodyType;
+	},
+});
+
+var BasketSubmitView = new Class(
+{
+	Extends: BasketView,
+	initialize: function(parentBasketHeader, icon, title)
+	{
+		this.parent(parentBasketHeader, icon, title);
+	},
+	
+	getBasketBodyType: function() { return this.setupBasketBodyType(); },
+	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		
+		var submitInput = new SendButton(this);
+		
+		// Contact Information
+		inputHolder = new Element('div', { 'class' : 'inputHolder' });
+		$(inputHolder).inject($(this.basketBodyType));		
+		var inputLabel = new Element('div', { 'class' : 'inputLabel', 'text' : '1. Contact information' });
+		$(inputLabel).inject($(inputHolder));
+		this.emailInput = new SpecialInput({ "defaultText" : "Your email-address" });
+		$(this.emailInput).set("id", "email");		
+		$(this.emailInput).inject($(inputHolder));	
+		this.submitButton.addRequirement(this.emailInput);
+		$(this.emailInput).addEvents({
+			"keyup" : function() { 		
+				if ($(this.emailInput).get("value") == this.emailInput.options.defaultText || $(this.emailInput).get("value") == "")
+				{
+					$(this.emailInput).setStyle("background-color", "white");	
+					this.emailInput.setValid(false);
+				}
+				else if ((($(this.emailInput).get("value").split('@').length) != 2) || (($(this.emailInput).get("value").split('@')[1].split(".").length) != 2)) 
+				{
+					$(this.emailInput).setStyle("background-color", "#DDAAAA"); 
+					this.emailInput.setValid(false);
+				}				
+				else 
+				{
+					$(this.emailInput).setStyle("background-color", "#AADDAA");
+					this.emailInput.setValid(true);				
+				}
+				// Tell submit button about email's validity.
+				this.submitButton.update();
+			}.bind(this)			
+		});
+		
+		// Format
+		inputHolder = new Element('div', { 'class' : 'inputHolder' });
+		$(inputHolder).inject($(this.basketBodyType));		
+		var inputLabel = new Element('div', { 'class' : 'inputLabel', 'text' : '2. Delivery type' });
+		$(inputLabel).inject($(inputHolder));
+		var deliveryInput = new SpecialSelect(this);		
+		var flatfileOption0 = new Element('option', { "value" : "", "text" : "<Choose type>" });
+		var flatfileOption1 = new Element('option', { "value" : "Flat file", "text" : "Flat file" });
+		var flatfileOption2 = new Element('option', { "value" : "Database", "text" : "Database" });
+		$(flatfileOption0).inject($(deliveryInput));		
+		$(flatfileOption1).inject($(deliveryInput));
+		$(flatfileOption2).inject($(deliveryInput));
+		$(deliveryInput).inject($(inputHolder));	
+				
+		delimiterOption = new SpecialInput({ 	
+												"defaultText" : "Delimiter (, - | .)",  
+												"width" : 110,	
+												"fontsize" : "0.9em"																						
+											});
+		
+		$(delimiterOption).setStyle("margin-left", "10px");
+		$(delimiterOption).inject($(inputHolder));
+		$(delimiterOption).setStyle("display", "none");
+		
+		databaseOption = new SpecialInput({ "defaultText" : "Name of database",
+											"width" : 130,	
+										    "fontsize" : "0.9em"
+										  });
+		$(databaseOption).setStyle("margin-left", "10px");
+		$(databaseOption).inject($(inputHolder));
+		$(databaseOption).setStyle("display", "none");
+				
+		$(deliveryInput).addEvents({
+			"change" : function() {
+				var text = $(deliveryInput).get("value");
+				if (text == "Flat file")
+				{
+					$(delimiterOption).setStyle("display", "inline");
+					$(databaseOption).setStyle("display", "none");
+				}
+				else if (text == "Database")
+				{
+					$(delimiterOption).setStyle("display", "none");
+					$(databaseOption).setStyle("display", "inline");
+				}
+				else
+				{
+					$(delimiterOption).setStyle("display", "none");
+					$(databaseOption).setStyle("display", "none");	
+				}
+			}.bind(this)
+		});
+		
+		// Send type
+		inputHolder = new Element('div', { 'class' : 'inputHolder' });
+		$(inputHolder).inject($(this.basketBodyType));		
+		var inputLabel = new Element('div', { 'class' : 'inputLabel', 'text' : '3. Send request' });
+		$(inputLabel).inject($(inputHolder));
+		
+		$(submitInput).inject($(inputHolder));	
+		$(submitInput).attach();
+	
+		return this.basketBodyType;
+	},
+	
+	submit: function()
+	{
+		if (this.emailInput.isValid())
+		{
+			console.log("Submitting.");
+		}
+		else
+		{
+			console.log("Something is wrong.");
+		}
+	},
+});
+
+var SpecialSelect = new Class(
+{
+	Implements: Options,
+	options:
+	{
+		"defaultValid" : null 
+	},
+	initialize: function(parentView) 
+	{
+		this.setOptions(options);
+		this.parentView = parentView;
+		this.element = new Element('select');
+		this.specialOptions = new Array();
+		this.setupDomElements();
+	},
+	
+	setupDomElements: function()
+	{
+		
+	},
+	
+	isValid: function() 
+	{
+		return bool;
+	},
+	
+	setValid: function(bool)
+	{
+		this.valid = bool;
+	},
+	
+	addSpecialOption: function(option) 
+	{
+		this.specialOptions.push(option);
+	},
+	
+	removeSpecialOption: function(option)
+	{
+		this.specialOptions.erase(option);
+	},	
+	
+	attach: function()
+	{
+		// Vid förändring, ändra vilken som är "aktiv." Vid förändring av den som är aktiv, så ska det också ändra SpecialInputs validity. Det ska mao finnas
+		// en länk mellan Option och parent.
+	},
+	
+	detach: function() 
+	{
+		this.removeEvents();
+	},
+});
+
+var SendButton = new Class(
+{
+	initialize: function(parentView) 
+	{
+		this.parentView = parentView;
+		this.requirements = new Array();
+		this.element = new Element('span', { 'class' : 'button', 'text' : 'send' });
+		this.setupDomElements();
+	},
+	
+	setupDomElements: function() {
+			
+	},
+	
+	addRequirement: function(requirement)
+	{
+		this.requirements.push(requirement);
+	},
+	
+	passesRequirements: function()
+	{
+		var isValid = Array.some(this.requirements, function(req)
+		{
+			return !req.isValid();
+		});
+	},
+	
+	attach: function() {
+		$(this).addEvents({
+			"mouseenter" : function() 
+			{ 
+				$(this).setStyles({ "background-color": "#666", "cursor" : "pointer" });
+			},
+			"mouseleave" : function()
+			{
+				$(this).setStyles({ "background-color": "#888", "cursor" : "default" });
+			},
+			"click" : function()
+			{
+				this.submit();
+			}.bind(this),
+		});	
+	},
+	
+	detach: function() {
+		$(this).removeEvents();
+	},
+	
+	toElement: function()
+	{
+		return this.element;
+	},
+	
+	submit: function() 
+	{
+		this.parentView.submit();
+	},
+	
+	update: function()
+	{
+		if (this.passesRequirements()) 
+			this.detach();
+		else
+			this.attach();
+	},		
+});
+
+var BasketItem = new Class(
+{
+	initialize: function(basketParent)
+	{
+		this.basketParent = basketParent; 
+	},
+	
+	start: function()
+	{
+		this.setupDomElements();
+		this.attach();
+	},
+	
+	setData: function(data)
+	{
+		this.data = data;
+	},
+	
+	toElement: function() { return this.element; },
+});
+
+var DatabaseBasketItem = new Class(
+{
+	Extends: BasketItem,
+	initialize: function(basketParent)
+	{
+		this.parent(basketParent);
+		this.children = new Array();
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'BasketItem' });
+		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.database });
+		
+		$(this.name).inject($(this));
+	},
+	
+	attach: function()
+	{	
+		$(this).addEvents({
+			"mouseenter": function() { $(this).highlight("#eee"); },
+		});
+	},
+});
+
+var TableBasketItem = new Class(
+{
+	Extends: BasketItem,
+	initialize: function(basketParent)
+	{
+		this.parent(basketParent);
+		this.children = new Array();
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'BasketItem' });
+		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.table });
+		
+		$(this.name).inject($(this));
+	},
+	
+	attach: function() { },
+});
+
+var ColumnBasketItem = new Class(
+{
+	Extends: BasketItem,
+	initialize: function(basketParent)
+	{
+		this.parent(basketParent);
+	},
+	
+	setupDomElements: function()
+	{
+		this.element = new Element('div', { 'class' : 'BasketItem' });
+		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.column });
+		
+		$(this.name).inject($(this));
+	},
+	
+	attach: function() { },
+});
+
+var SpecialInput = new Class(
+{	
+	Implements: Options,
+	options: 
+	{
+		"valid" : null,
+		"defaultText" : "",
+		"width" : 250,	
+		"fontsize" : "1em"
+	},
+	initialize: function(options)
+	{
+		this.setOptions(options);
+		this.element = new Element("input", { "class" : "specialInput", "value" : this.options.defaultText });
+		$(this).setStyles({
+			"color" : "#BBB",
+			"width" : this.options.width,
+			"font-size" : this.options.fontsize
+			/* "border-color" : "#DDD",
+			"border-width" : "2px",
+			"border-style" : "solid",
+			"box-shadow"   : "1px 1px 4px #777", */
+		});	
+		this.attach();
+	},
+	
+	toElement: function() { return this.element; },
+	
+	isValid: function() 
+	{
+		return this.options.valid;
+	},
+	
+	setValid: function(bool) 
+	{
+		this.setOptions({"valid" : bool});
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			blur: function()
+			{	
+				if ($(this).get("value") == this.options.defaultText || $(this).get("value") == "")
+					$(this).setStyle("color", "#bbb");
+				// $(this).setStyles({
+					// "border-color" : "#DDD",
+					// "border-width" : "2px",
+					// "border-style" : "solid"
+				// });
+				if ($(this).get("value") == "")
+					$(this).set("value", this.options.defaultText);
+			}.bind(this),
+			focus: function()
+			{
+				$(this).setStyle("color", "#000");
+				// $(this).setStyles({
+					// "border-color" : "73A6FF",
+					// "border-width" : "2px",
+					// "border-style" : "solid"
+				// });
+				if ($(this).get("value") == this.options.defaultText)
+					$(this).set("value", "");
+			}.bind(this),
+			keyup: function()
+			{				
+			}.bind(this),
+		});
+	},	
+});
+

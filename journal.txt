@@ -1,0 +1,48 @@
+Ny journal: >> Projektet tog en otäck vändning. Inga FKs. Tusentals tabeller. Miljoner kolumner. Bristande metadata.
+
+VÄGEN TILL PROJEKTETS AVSLUTAN
+[24 juni] 0. Definition of Done.
+[24 juni] 1. Skapa en MySQL-databas, helt ren. 
+[24 juni] 2. Skriv ett PHP-script som skapar tabeller och kolumner.
+[24 juni] 3. Skriv ett PHP-script som läser in flatfiles med data och befolkar databasen.
+[25 juni] 4. Skriv ett funktion i ett webb-interface som kan läsa och visa resultat från databasen via ajax.
+[25 juni] 5. Gör en genomgående design på hur web-interfacet kan se ut.
+[       ] x. Kunna lagga till tabeller, databaser och kolumner till 'sidan'. Detta andrar definitivt sokningarna.
+[       ] x. Designa hur tabell och kolumns add-to-basket ska se ut.
+
+Databas-struktur
+
+FACT_TABLE:
+COLUMN_ID     fk (reference to COLUMN_LOOKUP.COLUMN_ID)
+TABLE_ID      fk (reference to TABLE_LOOKUP.TABLE_ID)
+DATABASE_ID   fk (reference to DATABASE_LOOKUP.DATABASE_ID)
+
+COLUMN_LOOKUP
+-------------
+COLUMN_ID
+COLUMN_NAME
+
+TABLE_LOOKUP
+-------------
+TABLE_ID
+TABLE_NAME
+
+DATABASE_LOOKUP
+---------------
+DATABASE_ID
+DATABASE_NAME
+DATABASE_DESCRIPTION
+
+
+Nostalgiskt att kika i den här filen. Nu är jag i England. Hade jag aldrig gissat i juli. Som jag sa till Laila; Vi vet inte var vi är någonstans nästa halvår. Hoppas att jag är i 
+norra Frankrike efter jul. Vem vet? 
+- BEHÖVER GÖRAS I KODEN:
+
+Göra enkla val i kolumner och tabeller. (Skriv till Outgoing format..)
+Baskethanteringen.
+PseudoSQL View (Outgoing Format)
+Connection View (Outgoing Format)
+Tree View (Outgoing Format)
+Send Interface.
+Send Outgoing Format.
+Send Email-funktion.
