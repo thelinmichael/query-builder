@@ -772,13 +772,15 @@ var TableRow = new Class(
 	}	
 });
 
+/** 
+ * DOM. Column in the rows.
+ */
 var ColumnRow = new Class(
 {
 	Extends: Row,
 	initialize: function(parentMainWindow, data, collection)
 	{
 		this.parent(parentMainWindow, data, collection);
-
 		var dataBreakdown = this.data.split('.');
 		this.database = dataBreakdown[0];
 		this.table = dataBreakdown[1];
@@ -885,12 +887,16 @@ var ColumnRow = new Class(
 	
 	updateAddRemove: function()
 	{
+		/* Check if this part is already in the basket. */
 		this.isInBasket = this.parentMainWindow.main.basket.isInBasket(this.data);
+		
+		/* Put remove-button if already in the basket */
 		if (this.isInBasket)
 		{
 			$(this.addButton).setStyle("display", "none");
 			$(this.removeButton).setStyle("display", "inline");
 		}
+		/* Put add-button if not in the basket */
 		else
 		{
 			$(this.removeButton).setStyle("display", "none");
@@ -1252,8 +1258,7 @@ var InputField = new Class(
 		this.main.getData(this.options.dbInfo.table, this.options.dbInfo.column, $(this).get("value"));		
 	},
 	
-	toElement: function() { return this.element; },
-	
+	toElement: function() { return this.element; },	
 });
 
 var BrowseButton = new Class(
@@ -1504,10 +1509,8 @@ var DatabaseElementContainer = new Class(
 	getValues: function() { return this.databaseElements; },
 	
 	toElement: function() { return this.element; },
-
 });	
 	
-
 var DatabaseElement = new Class(
 {	
 	Implements: Options,
@@ -1668,7 +1671,10 @@ var CollectionAdd = new Class(
 	
 	toElement: function() { return this.element; },	
 });	
-	
+
+/**
+ *  Submit Icon?
+ */ 
 var Submit = new Class(
 {
 	initialize: function(main, collection, type, elementId)
@@ -1724,6 +1730,7 @@ var Submit = new Class(
 	toElement: function() { return this.element; },
 });
 
+/* This is a DOM element! The basket part of the application. */
 var Basket = new Class(
 {
 	initialize: function(main, elementId)
@@ -1732,10 +1739,11 @@ var Basket = new Class(
 		this.main = main;
 		this.currentView = null;
 		this.shownViews = new Array();
+		this.currentBasket = new BasketStructure();
 		this.setupDomElements();
-		this.itemArray = new Array();
 	},
 	
+	/* Set up the DOM elements */
 	setupDomElements: function()
 	{	
 		this.basketBody = $('basket-body');
@@ -1743,7 +1751,7 @@ var Basket = new Class(
 		basketHeader = new BasketHeader('basket-header', this);
 		
 		basketHeader.addBasketPart('views');
-		basketHeader.addBasketPart('custom');
+		basketHeader.addBasketPart('custom');  
 		basketHeader.addBasketPart('submit');
 		
 		basketHeader.addBasketView(new BasketTreeView(basketHeader, "M6.812,17.202l7.396-3.665v-2.164h-0.834c-0.414,0-0.808-0.084-1.167-0.237v1.159l-7.396,3.667v2.912h2V17.202zM26.561,18.875v-2.913l-7.396-3.666v-1.158c-0.358,0.152-0.753,0.236-1.166,0.236h-0.832l-0.001,2.164l7.396,3.666v1.672H26.561zM16.688,18.875v-7.501h-2v7.501H16.688zM27.875,19.875H23.25c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2h4.625c1.104,0,2-0.896,2-2v-4.625C29.875,20.771,28.979,19.875,27.875,19.875zM8.125,19.875H3.5c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2h4.625c1.104,0,2-0.896,2-2v-4.625C10.125,20.771,9.229,19.875,8.125,19.875zM13.375,10.375H18c1.104,0,2-0.896,2-2V3.75c0-1.104-0.896-2-2-2h-4.625c-1.104,0-2,0.896-2,2v4.625C11.375,9.479,12.271,10.375,13.375,10.375zM18,19.875h-4.625c-1.104,0-2,0.896-2,2V26.5c0,1.104,0.896,2,2,2H18c1.104,0,2-0.896,2-2v-4.625C20,20.771,19.104,19.875,18,19.875z", "Tree view"), 'views');
@@ -1755,25 +1763,6 @@ var Basket = new Class(
 		basketHeader.attach();
 		basketHeader.selectView(basketHeader.views[0]);
 	},
-	
-	addItem: function(data)
-	{
-		var dataBreakdown = data.split('.');
-		if (dataBreakdown.length == 1)
-			var newItem = DatabaseBasketItem({ "database" : dataBreakdown[0] });
-		else if (dataBreakdown.length == 2)
-			var newItem = TableBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1] });
-		else if (dataBreakdown.length == 3) {
-			var newItem = ColumnBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] });
-		}
-		else
-			throw new Error("Could not identify type when adding a basketitem.");
-			
-		this.itemArray.push(newItem);		
-		this.updateView();
-	},	
-
-	getItems: function() { return this.itemArray; },
 	
 	setView: function(view)
 	{
@@ -1799,41 +1788,15 @@ var Basket = new Class(
 		$(this.currentView.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
 	},
 	
-	isInBasket: function(data)
-	{
-		var dataBreakdown =  data.split('.');
-		if (dataBreakdown.length == 1)
-		{
-			var type = "database";
-			splitData = { "database" : dataBreakdown[0] };
-		}
-		else if (dataBreakdown.length == 2)
-		{
-			var type = "table";
-			splitData = { "database" : dataBreakdown[0], "table" : dataBreakdown[1] };
-		}
-		else if (dataBreakdown.length == 3)
-		{
-			var type = "column";
-			splitData = { "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] };
-		}
-		if (type == "column")
-		{
-			var foundItem = Array.some(this.itemArray, function(item)
-			{
-				return (item.data.column == splitData.column)			
-			}.bind(this));
-		}
-		else
-		{
-			throw new Error("Not column.");
-		}
-		return foundItem;
-	},
+	/* Man in the middle functions */
+	isInBasket: function(item) { return this.currentBasket.isInBasket(item); },
+	addItem: function(item) { return this.currentBasket.addItem(item); },
+	removeItem: function(item) { return this.currentBasket.removeItem(item); },
 	
 	toElement: function() { return this.element; },
 });
 
+/* DOM element. Header of the basket, contains icons. */
 var BasketHeader = new Class(
 {
 	initialize: function(elementId, parentBasket)
@@ -1912,6 +1875,7 @@ var BasketHeader = new Class(
 	toElement: function() { return this.element; }
 });
 
+/* DOM. This view is the parent view class. */
 var BasketView = new Class(
 {
 	initialize: function(parentBasketHeader, icon, title)
@@ -1976,6 +1940,7 @@ var BasketView = new Class(
 	toElement: function() { return this.element; },
 });
 
+/* DOM Basket view */
 var BasketTreeView = new Class(
 {
 	Extends: BasketView,
@@ -2011,11 +1976,12 @@ var BasketConnectionView = new Class(
 	setupBasketBodyType: function()
 	{
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
-		
+		var noSupport = new Element(''); 
 		return this.basketBodyType;
 	},
 });
 
+/* DOM Basket Pseudo View */
 var BasketPseudoView = new Class(
 {
 	Extends: BasketView,
@@ -2034,6 +2000,7 @@ var BasketPseudoView = new Class(
 	},
 });
 
+/* DOM Basket SQL View */
 var BasketSqlView = new Class(
 {
 	Extends: BasketView,
@@ -2081,6 +2048,7 @@ var BasketSqlView = new Class(
 	},
 });
 
+/* DOM Basket Submit View */
 var BasketSubmitView = new Class(
 {
 	Extends: BasketView,
@@ -2206,6 +2174,7 @@ var BasketSubmitView = new Class(
 	},
 });
 
+/* DOM Select element with special features */
 var SpecialSelect = new Class(
 {
 	Implements: Options,
@@ -2222,7 +2191,7 @@ var SpecialSelect = new Class(
 		this.setupDomElements();
 	},
 	
-	setupDomElements: function()
+	setupDomElements: function() 
 	{
 		
 	},
@@ -2259,6 +2228,7 @@ var SpecialSelect = new Class(
 	},
 });
 
+/* Select button with special features */
 var SendButton = new Class(
 {
 	initialize: function(parentView) 
@@ -2326,91 +2296,7 @@ var SendButton = new Class(
 	},		
 });
 
-var BasketItem = new Class(
-{
-	initialize: function(basketParent)
-	{
-		this.basketParent = basketParent; 
-	},
-	
-	start: function()
-	{
-		this.setupDomElements();
-		this.attach();
-	},
-	
-	setData: function(data)
-	{
-		this.data = data;
-	},
-	
-	toElement: function() { return this.element; },
-});
-
-var DatabaseBasketItem = new Class(
-{
-	Extends: BasketItem,
-	initialize: function(basketParent)
-	{
-		this.parent(basketParent);
-		this.children = new Array();
-	},
-	
-	setupDomElements: function()
-	{
-		this.element = new Element('div', { 'class' : 'BasketItem' });
-		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.database });
-		
-		$(this.name).inject($(this));
-	},
-	
-	attach: function()
-	{	
-		$(this).addEvents({
-			"mouseenter": function() { $(this).highlight("#eee"); },
-		});
-	},
-});
-
-var TableBasketItem = new Class(
-{
-	Extends: BasketItem,
-	initialize: function(basketParent)
-	{
-		this.parent(basketParent);
-		this.children = new Array();
-	},
-	
-	setupDomElements: function()
-	{
-		this.element = new Element('div', { 'class' : 'BasketItem' });
-		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.table });
-		
-		$(this.name).inject($(this));
-	},
-	
-	attach: function() { },
-});
-
-var ColumnBasketItem = new Class(
-{
-	Extends: BasketItem,
-	initialize: function(basketParent)
-	{
-		this.parent(basketParent);
-	},
-	
-	setupDomElements: function()
-	{
-		this.element = new Element('div', { 'class' : 'BasketItem' });
-		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.column });
-		
-		$(this.name).inject($(this));
-	},
-	
-	attach: function() { },
-});
-
+/* SpecialInput -- Represents a HTML DOM Element Input but has special behaviour. */
 var SpecialInput = new Class(
 {	
 	Implements: Options,
@@ -2483,3 +2369,157 @@ var SpecialInput = new Class(
 	},	
 });
 
+/* -------------------------------  BASKET BEGINS -----------------  */
+
+/* BasketItem -- Superclass for all basket items. */
+var BasketItem = new Class(
+{
+	initialize: function(basketParent)
+	{
+		this.basketParent = basketParent; 
+	},
+	
+	start: function()
+	{
+		this.setupDomElements();  // Run by subclass.
+		this.attach();			  // Run by subclass.
+	},
+	
+	setData: function(data) { this.data = data; },	
+	getData: function() { return this.data; },
+	
+	toElement: function() { return this.element; },
+});
+
+/* DatabaseBasketItem -- Child to BasketItem. Represents a database in the basket. NOT SUPPORTED. */
+var DatabaseBasketItem = new Class(
+{ /* ... */ });
+
+/* TableBasketItem -- Child to BasketItem. Represents a database in the basket. NOT SUPPORTED. */
+var TableBasketItem = new Class(
+{ /* ... */ });
+
+/* ColumnBasketItem -- Child to BasketItem. Represents a database in the basket. */
+var ColumnBasketItem = new Class(
+{
+	Extends: BasketItem,
+	initialize: function(basketParent)
+	{
+		this.parent(basketParent);
+		this.aggregated = false;
+	},
+	
+	setupDomElements: function()	
+	{
+		this.element = new Element('div', { 'class' : 'BasketItem' });
+		this.name = new Element('span', { 'class' : 'BasketName', 'text' : this.data.column });
+		
+		$(this.name).inject($(this));
+	},
+	
+	attach: function() { },
+});
+
+/* BasketStructure */
+var BasketStructure = new Class(
+{
+	initialize: function() 
+	{
+		this.chosenColumns = new Array();
+	},	
+
+	/* Check if item exists in structure already and has the correct format. If not, add it. */
+	addItem: function(data) 
+	{
+		var dataBreakdown = data.split('.');
+		if (dataBreakdown.length == 1)
+			var newItem = DatabaseBasketItem({ "database" : dataBreakdown[0] }); // Database adding is not supported in this version. 
+		else if (dataBreakdown.length == 2)
+			var newItem = TableBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1] }); // Table adding is not supported in this version.
+		else if (dataBreakdown.length == 3) {
+			var newItem = ColumnBasketItem({ "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] });
+		}
+		else
+			throw new Error("Could not identify type when adding a basketitem.");
+			
+		this.chosenItems.addItem(newItem);		
+		this.updateView();
+	},
+	
+	removeItem: function(item)
+	{
+	
+	},
+	
+	removeItems: function()
+	{
+	
+	},
+	
+	containsItem: function(item)
+	{
+	
+	},
+	
+	getItems: function() 
+	{
+	
+	},
+	
+	/* 
+	 * Check if two database objects are in fact the same
+	 * by matching names of database, table and column.
+	 * Only supports comparisons between two columns.
+	 * Return true if items are the same
+	 *        false if items are not the same
+	 */
+	compare: function(item1, item2) 
+	{
+		console.log(item1);
+		console.log(item2);
+		return false;
+	},
+	
+	/* 
+	 * Checks if Column is already in basket.
+	 * Return true if so, return false if not.
+	 */
+	isInBasket: function(data)
+	{
+		var dataBreakdown =  data.split('.'); // Split the data into database, table, column.
+		
+		if (dataBreakdown.length == 1)        // Must be a database. 
+		{
+			var type = "database";
+			newItem = { "database" : dataBreakdown[0] };
+		}
+		else if (dataBreakdown.length == 2)	  // Must be a table.
+		{
+			var type = "table";
+			newItem = { "database" : dataBreakdown[0], "table" : dataBreakdown[1] };
+		}
+		else if (dataBreakdown.length == 3)	  // Must be a column.
+		{
+			var type = "column";
+			newItem = { "database" : dataBreakdown[0], "table" : dataBreakdown[1], "column" : dataBreakdown[2] };
+		}
+		
+		/* Compare columns */
+		if (type == "column")
+		{			
+			var foundItem = Array.some(this.chosenColumns, function(columnInBasket)
+			{
+				return this.compare(columnInBasket, newItem);		
+			}.bind(this));
+		}
+		
+		// Only columns are currently supported.
+		else
+		{
+			throw new Error("Not column.");
+		}
+		return foundItem;
+	},
+});
+
+/* -------------------------------  BASKET ENDS -----------------  */
