@@ -7,29 +7,30 @@
 	* on the structure of the data warehouse. 
 	*/
  
+	/* Testing mode */
 	$testing = true;
 
-	// Connect to MySQL database
+	/* Connect to MySQL database */
 	$connection = mysql_connect($hostname, $user, $password);
 	if (!$connection) 
 	{
 		die('Could not connect: ' . mysql_error());
 	}
 
-	// Drop database (testing mode)
+	/* Drop database (testing mode) */
 	if ($testing) 
 	{
-		$sql = 'DROP DATABASE ' . $dbName; 
+		$sql = 'DROP DATABASE ' . $dbname; 
 		mysql_query($sql, $connection);
 	}
 
-	// Create and select database
-	$sql = 'CREATE DATABASE ' . $dbName;	
+	/* Create and select database */
+	$sql = 'CREATE DATABASE ' . $dbname;	
 	mysql_query($sql, $connection) or die ('Could not create database.');
 	mysql_select_db($dbName) or die('Cannot select database'); 	
 
 
-	// Create lookup table for databases
+	/* Create lookup table for databases */
 	$sql = 
 	"CREATE TABLE database_lookup
 	(
@@ -39,7 +40,7 @@
 	mysql_query($sql, $connection) or die("Could not create table.");		
 
 
-	// Create lookup table for tables
+	/* Create lookup table for tables */
 	$sql =
 	"CREATE TABLE table_lookup
 	(
@@ -49,7 +50,7 @@
 	mysql_query($sql, $connection) or die("Could not create table.");		
 
 
-	// Create fact table
+	/* Create fact table */
 	$sql = 
 	"CREATE TABLE column_fact
 	(
@@ -62,6 +63,26 @@
 	)";
 	mysql_query($sql, $connection) or die("Could not create table.");		
 
+	
+	/* 
+	 * Creating indexes
+	 * 
+	 * Indexes are made on the names of both lookup tables,
+	 * as well as on the name of the column in the fact table.
+	 *
+	 * Index datastructure is balanced tree.
+	 */
+	$sql = "CREATE INDEX table_index ON table_lookup (table_name) USING BTREE";
+	mysql_query($sql, $connection) or die("Could not create index.");
+	
+	$sql = "CREATE INDEX column_index ON column_fact (column_name) USING BTREE";
+	mysql_query($sql, $connection) or die("Could not create index.");
+	
+	$sql = "CREATE INDEX database_index ON database_lookup (database_name) USING BTREE";
+	mysql_query($sql, $connection) or die("Could not create index.");
+	
+	/* Close connection to database */
+	mysql_close($connection);
 
 	// Close the database connection
 	mysql_close($connection);

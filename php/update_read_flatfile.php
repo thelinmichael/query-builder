@@ -81,26 +81,5 @@
 			mysql_query($sql, $connection) or die("Could not insert into fact table.");
 		}
 		fclose($handle);
-	}
-	
-	
-	/* 
-	 * Creating indexes
-	 * 
-	 * Indexes are made on the names of both lookup tables,
-	 * as well as on the name of the column in the fact table.
-	 *
-	 * Index datastructure is balanced tree.
-	 */
-	$sql = "CREATE INDEX table_index ON table_lookup (table_name) USING BTREE";
-	mysql_query($sql, $connection) or die("Could not create index.");
-	
-	$sql = "CREATE INDEX column_index ON column_fact (column_name) USING BTREE";
-	mysql_query($sql, $connection) or die("Could not create index.");
-	
-	$sql = "CREATE INDEX database_index ON database_lookup (database_name) USING BTREE";
-	mysql_query($sql, $connection) or die("Could not create index.");
-	
-	/* Close connection to database */
-	mysql_close($connection);
+	}	
 ?>
