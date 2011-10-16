@@ -5,14 +5,19 @@
 	 * flat file's contents. 
 	 */
 	 
+	 require_once('auth_details.php');
+	 
 	 /* Name of flat file */
 	 $filename = "..\data\columns.dat";
+	 
+	 /* Delimiter */
+	 $delimiter = "|";
 
 	 /* Connect to the MySQL database and select the database. */
 	$connection = mysql_connect($hostname, $user, $password);
 	if (!$connection) 
 		die('Could not connect: ' . mysql_error());	
-	mysql_select_db($dbName) or die('Cannot select database'); 	
+	mysql_select_db($dbname) or die('Cannot select database'); 	
 
 	
 	/* Set start values */
@@ -31,7 +36,7 @@
 	if (($handle = fopen($filename, "r")) !== FALSE) {
 	
 		/* While there's more rows in the flatfile, do.. */
-		while (($data = fgetcsv($handle, 0, "|")) !== FALSE) {
+		while (($data = fgetcsv($handle, 0, $delimiter)) !== FALSE) {
 		
 			set_time_limit(180); 
 			
