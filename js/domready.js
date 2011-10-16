@@ -1,8 +1,25 @@
+/*
+ * All classes belonging to the project are placed
+ * in this file, below the immidiate window.addEvent('domready'
+ * call.
+ * 
+ * All classes are using MooTools 1.3.1 javascript framework. 
+ * Third party javascript is found in /js/thirdparty folder. 
+ */
+
 window.addEvent('domready', function() 
 {  	
 	var main = new Main();	
 }); 
 
+/*
+ * Main class. 
+ * Sets up the rest of the javascript functionality
+ * and controls all parts of the application, such as 
+ * the main window, the basket, et cetera. 
+ * Parts wanting to access each other has to go through
+ * the main class.
+ */
 var Main = new Class(
 {
 	initialize: function()
@@ -12,21 +29,7 @@ var Main = new Class(
 		this.basket = new Basket(this, 'basket-body');
 		this.setupInputs();
 		
-		this.eraseContents = $('eraseContents');
-		$(this.eraseContents).addEvents(
-		{
-			"mouseenter" : function() { $('eraseContentsText').setStyle("text-decoration", "underline"); $(this.eraseContents).setStyle("cursor", "pointer"); }.bind(this),
-			"mouseleave" : function() { $('eraseContentsText').setStyle("text-decoration", "none"); $(this.eraseContents).setStyle("cursor", "default"); }.bind(this),
-			"click" : function() { 
-				this.numHits.set("text", ""); 
-				this.mainWindow.clean(); 
-				this.mainWindow.resetFilterInfo(); 
-				this.mainWindow.selectBox.reset();	// reset select
-				
-				}.bind(this)
-		});
-		
-		this.numHits = $('numHits');
+		this.setupEraseContent();			
 	},	
 	
 	setupInputs: function()
@@ -54,6 +57,9 @@ var Main = new Class(
 		this.submitDatabase = new Submit(this, this.databaseCollection, 'database', 'databaseSubmit').attach();
 		this.submitTable = new Submit(this, this.tableCollection, 'table', 'tableSubmit').attach();
 		this.submitColumn = new Submit(this, this.columnCollection, 'column', 'columnSubmit').attach();
+		
+		/* Element which states the number of search hits. */
+		this.numHits = $('numHits');
 	},
 	
 	getDatabaseValue: function() { return this.inputDatabase.getValue(); },
@@ -141,6 +147,24 @@ var Main = new Class(
 		this.numHits.set("text", result.length + " hit(s).");
 		this.mainWindow.massageData(result);
 	},	
+	
+	/* Erase contents in the main window */		
+	setupEraseContents: function() 
+	{
+		this.eraseContents = $('eraseContents');
+		$(this.eraseContents).addEvents(
+		{
+			"mouseenter" : function() { $('eraseContentsText').setStyle("text-decoration", "underline"); $(this.eraseContents).setStyle("cursor", "pointer"); }.bind(this),
+			"mouseleave" : function() { $('eraseContentsText').setStyle("text-decoration", "none"); $(this.eraseContents).setStyle("cursor", "default"); }.bind(this),
+			"click" : function() { 
+				this.numHits.set("text", ""); 
+				this.mainWindow.clean(); 
+				this.mainWindow.resetFilterInfo(); 
+				this.mainWindow.selectBox.reset();	
+				
+				}.bind(this)
+		});
+	},
 });
 
 var MainWindow = new Class(
