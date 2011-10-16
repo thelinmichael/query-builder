@@ -1,23 +1,25 @@
 <?php
 
-	/*
-	 * 
-	 * 
-	 */
-	require_once('auth_details.php');
-
+  /*
+   * Used by UI and not the initialization or update process.
+   * 
+   * Gets column names matching a search string in the UI.
+   */
+   
+	// Database information
+	$user = 'root';
+	$pass = 'mickemicke';
 
 	$search = $_POST['search'];
 
-	$result = array();
-	 
+	$result = array();	 
 	// Some simple validation
 	if (is_string($search) && strlen($search) > 2 && strlen($search) < 64)
 	{
 		$dbh = new PDO('mysql:host=localhost;dbname=theEbayDb', $user, $pass);
 
 		// Building the query
-		$stmt = $dbh->prepare("SELECT table_name FROM table_lookup WHERE table_name LIKE ?");
+		$stmt = $dbh->prepare("SELECT column_name FROM column_lookup WHERE column_name LIKE ?");
 	 
 		// The % as wildcard
 		if ($stmt->execute(array($search . '%') ) )
@@ -25,7 +27,7 @@
 			// Filling the results with usernames
 			while (($row = $stmt->fetch() ) )
 			{
-			   $result[] = $row['table_name'];
+			   $result[] = $row['column_name'];
 			}
 		}
 	}
