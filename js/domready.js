@@ -24,36 +24,42 @@ var Main = new Class(
 {
 	initialize: function()
 	{
-		this.mainWindow  = new MainWindow(this);
-		this.dataHandler = new DataHandler(this);
-		this.basket = new Basket(this, 'basket-body');
-		this.setupInputs();
-		
-		this.setupEraseContent();			
+		this.mainWindow  = new MainWindow(this);	// Window that presents the results
+		this.dataHandler = new DataHandler(this);	// Handles the data 
+		this.basket 	 = new Basket(this, 'basket-body'); // Basket saving the 'chosen' database objects
+	
+		this.setupInputs();		     // Input fields and buttons from the HTML.		
+		this.setupEraseContent();	 // 'Erase content in main window'	
 	},	
 	
 	setupInputs: function()
-	{		 
+	{	
+		/* Text input boxes */
 		this.inputDatabase = new InputField(this, "databaseInput", { defaultText : "Search database(s)", dbInfo: { table : "database_lookup", column : "database_name" } }).attach();
 		this.inputTable    = new InputField(this, "tableInput", { defaultText : "Search table(s)", dbInfo: { table : "table_lookup", column : "table_name" } }).attach();
 		this.inputColumn   = new InputField(this, "columnInput", { defaultText : "Search column(s)", dbInfo: { table : "column_lookup", column : "column_name" } }).attach();	
-					
-		new Autocompleter.Request.JSON(this, 'columnInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'column'});
-		new Autocompleter.Request.JSON(this, 'tableInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'table'	});
-		new Autocompleter.Request.JSON(this, 'databaseInput', 'php/readdata.php', { 'postVar': 'search', 'type' : 'database' });
+		
+		/* Autocompleters for the input boxes */
+		new Autocompleter.Request.JSON(this, 'columnInput', 'php/ui_readdata.php', { 'postVar': 'search', 'type' : 'column'});
+		new Autocompleter.Request.JSON(this, 'tableInput', 'php/ui_readdata.php', { 'postVar': 'search', 'type' : 'table'	});
+		new Autocompleter.Request.JSON(this, 'databaseInput', 'php/ui_readdata.php', { 'postVar': 'search', 'type' : 'database' });
 				
+		/* Text links below the input boxes */		
 		this.databaseBrowse = new BrowseButton(this, 'database', 'first').attach();
 		this.tableBrowse = new BrowseButton(this, 'table', 'second').attach();	
 		this.columnBrowse = new BrowseButton(this, 'column', 'third').attach();
 		
+		/* Container showing the chosen database objects (left of the input boxes) */
 		this.databaseCollection = new DatabaseElementContainer(this, 'databaseCollection', 'collectionFooterDatabase', this.tableBrowse);
 		this.tableCollection    = new DatabaseElementContainer(this, 'tableCollection', 'collectionFooterTable', this.columnBrowse);
 		this.columnCollection   = new DatabaseElementContainer(this, 'columnCollection', 'collectionFooterColumn', null);
 				
+		/* Button for adding the database object in the input box to the container  */		
 		this.databaseAdd = new CollectionAdd(this, this.databaseCollection, this.inputDatabase, 'databaseAdd').attach();
 		this.tableAdd    = new CollectionAdd(this, this.tableCollection, this.inputTable, 'tableAdd').attach();
 		this.columnAdd   = new CollectionAdd(this, this.columnCollection, this.inputColumn, 'columnAdd').attach();
 		
+		/* Button for submitting the chosen database objects in the container and showing them in the main window */
 		this.submitDatabase = new Submit(this, this.databaseCollection, 'database', 'databaseSubmit').attach();
 		this.submitTable = new Submit(this, this.tableCollection, 'table', 'tableSubmit').attach();
 		this.submitColumn = new Submit(this, this.columnCollection, 'column', 'columnSubmit').attach();
@@ -62,10 +68,15 @@ var Main = new Class(
 		this.numHits = $('numHits');
 	},
 	
+	/* Get values in the input boxes */
 	getDatabaseValue: function() { return this.inputDatabase.getValue(); },
-	getTableValue: function() {	return this.inputTable.getValue(); },
-	getColumnValue: function() { return this.inputColumn.getValue(); },
+	getTableValue: function()    { return this.inputTable.getValue(); },
+	getColumnValue: function()   { return this.inputColumn.getValue(); },
 	
+	/* 
+	 * Get all chosen databases 
+     * @return Array<String>	 
+	 */ 
 	getDatabaseValues: function() 
 	{
 		var returnArray = new Array();
@@ -76,6 +87,10 @@ var Main = new Class(
 		return returnArray;
 	},
 	
+	/* 
+	 * Get all chosen tables 
+     * @return Array<String>	 
+	 */ 
 	getTableValues: function() 
 	{ 
 		var returnArray = new Array();
@@ -86,6 +101,10 @@ var Main = new Class(
 		return returnArray;
 	},
 	
+	/* 
+	 * Get all chosen columns 
+     * @return Array<String>	 
+	 */ 
 	getColumnValues: function() 
 	{ 
 		var returnArray = new Array();
@@ -96,6 +115,12 @@ var Main = new Class(
 		return returnArray;
 	},
 	
+	/* 
+	 * Search the database for objects matching the user inputs
+	 * @param String type The type of the data to be read; database, table or column.
+	 * @param notContainer boolean If the input comes from the submit button, true.
+     *                             From the browse button, false.   
+	 */
 	readData: function(type, notContainer)
 	{
 		try 
@@ -105,20 +130,23 @@ var Main = new Class(
 				data.notcontainer = 1;
 			else 
 				data.notcontainer = 0;
-			// Check type to know which array to collect information from.
-			this.mainWindow.setType(type);
-			this.dataHandler.readData(data, this.setQueryResult.bind(this));		
+				
+			this.mainWindow.setType(type);										 // Let the main window know which type.
+			this.dataHandler.readData(data, this.setQueryResult.bind(this));     // Send data and set the call back function 
 		}
-		catch(e)
-		{
-			throw new Error("Could not fetch data: " + e.message);
-		}
+		catch(e) { throw new Error("Could not fetch data: " + e.message); }
 	},
 	
+	/*
+	 * Show database objects in the main window, show number of objects.
+	 * @param DatabaseElementContainer collection A collection of database objects
+	 * @param String type The type of database object (database, table, column)
+	 */
 	showData: function(collection, type)
 	{	
 		var showArray = new Array();
 		this.mainWindow.setType(type);
+		
 		Array.each(collection.getValues(), function(collectionElement)
 		{	
 			if (type == "database")
@@ -141,6 +169,11 @@ var Main = new Class(
 		this.mainWindow.massageData(showArray);
 	},
 	
+	/* 
+	 * Callback function when results have been received from the MySQL database 
+	 * Send data to main window for display. Display number of database objects.
+	 * @param String result JSON encoded result
+	 */
 	setQueryResult: function(result)
 	{
 		result = JSON.decode(result);	
@@ -149,7 +182,7 @@ var Main = new Class(
 	},	
 	
 	/* Erase contents in the main window */		
-	setupEraseContents: function() 
+	setupEraseContent: function() 
 	{
 		this.eraseContents = $('eraseContents');
 		$(this.eraseContents).addEvents(
@@ -160,40 +193,50 @@ var Main = new Class(
 				this.numHits.set("text", ""); 
 				this.mainWindow.clean(); 
 				this.mainWindow.resetFilterInfo(); 
-				this.mainWindow.selectBox.reset();	
-				
-				}.bind(this)
+				this.mainWindow.selectBox.reset();					
+			}.bind(this)
 		});
 	},
 });
 
+/* The main window where database objects are presented. */
 var MainWindow = new Class(
 {
-	initialize: function(main)
+	Implements: Options,
+	options: 
+	{ 
+		"maxHits" : 100000, 
+		"type"    : null,
+	},
+	/* 
+	 * @param Main main The main object 
+	 * @param Options options The object options
+	 */
+	initialize: function(main, options)
 	{
-		this.element = $('main');
+		this.setOptions(options);
 		this.main = main;
-		this.rows = new Array();
-		this.type = null;
-		this.filter = new Filter('filter', this);
-		this.filterInfo = $('filterInfo');
-		this.spinner = new Spinner($(this), { message: "Fetching results from database...", class : "spinner" } );
-		this.selectAll = $('select');
-		this.unselectAll = $('unselect');
-		this.selectBox = new SelectAction(this, 'selectaction');
+
+		this.rows = new Array();						
+		this.setupDomElements();
 		this.attach();
 	},	
 	
-	setHtml: function(html)
-	{
-		$(this).set("html", html);
+	setupDomElements: function() 
+	{	
+		this.element     = $('main');
+		this.selectAll   = $('select');
+		this.unselectAll = $('unselect');				
+		this.filter      = new Filter('filter', this);
+		this.filterInfo  = $('filterInfo');
+		this.spinner     = new Spinner($(this), { message: "Fetching results from database...", class : "spinner" } );
+		this.selectBox   = new SelectAction(this, 'selectaction');	
 	},
 	
-	setType: function(type)
-	{
-		this.type = type;
-	},
+	/* Change the HTML of this DOM element */
+	setHtml: function(html) { $(this).set("html", html); },
 	
+	/* Uncheck the checked database objects in the main window */
 	resetChecked: function()
 	{
 		Array.each(this.rows, function(row)
@@ -203,10 +246,16 @@ var MainWindow = new Class(
 		}.bind(this));	
 	},
 	
-	// doSelect bool. true if select all checked. false if unselect all checked.
+	/*
+	 * Select or deselect the checked database objects.
+     * @param boolean doSelect Select all checked database objects which are checked if true. 
+	 *                         Deselect all checked database objects false if false.
+	 */
 	selectChecked: function(doSelect)
 	{
 		var collection;
+		
+		/* Check type of objects in the main window and set which type of collection is getting (de)seleted */
 		if (this.type == "database") 
 			collection = this.main.databaseCollection;	
 		else if (this.type == "table")
@@ -215,6 +264,8 @@ var MainWindow = new Class(
 			collection = this.main.columnCollection;
 		else
 			throw new Error("Could not identify type.");
+		
+		/* Add checked database objects to the collection of selected objects */
 		if (doSelect)
 		{
 			Array.each(this.rows, function(row)
@@ -223,37 +274,35 @@ var MainWindow = new Class(
 					collection.add(new DatabaseElement(collection, row.data));
 			}.bind(this));			
 		}
+		/* Deselect checked database objects from the collection of selected objects */
 		else
 		{
 			Array.each(this.rows, function(row)
 			{
-				if (row.isChecked())
-				{
+				if (row.isChecked())	 
 					collection.removeJustText(row.data);
-				}
 			}.bind(this));			
 		}
 	},
 	
-	startSpinner: function()
-	{
-		this.spinner.show();
-	},
+	/* Start and stop the spinner, shown when loading content */ 
+	startSpinner: function() { this.spinner.show(); },	
+	stopSpinner:  function() { this.spinner.hide(); },
 	
-	stopSpinner: function()
-	{
-		this.spinner.hide();
-	},
-	
+	/* 
+	 * Handle data received by the main window.
+	 * Put the data into the rows of the main window.
+	 * @param Array<>
+	 */
 	massageData: function(dataArray)
 	{		
 		this.selectBox.setOptionType(this.type);	
-		this.rows.empty();
+		this.rows.empty();		
 		this.clean();
 		this.resetFilterInfo();
 		this.filter.reset();
 		
-		if (dataArray.length > 10000) 
+		if (dataArray.length > this.options.maxHits) 
 		{
 			throw new Error("Too many hits.");
 		}
@@ -272,10 +321,7 @@ var MainWindow = new Class(
 		}.bind(this));
 	},
 	
-	clean: function()
-	{
-		$(this).getChildren().destroy();
-	},
+	clean: function() { $(this).getChildren().destroy(); },
 	
 	attach: function()
 	{
@@ -307,21 +353,33 @@ var MainWindow = new Class(
 		
 	},
 	
-	resetFilterInfo: function()
-	{
-		this.filterInfo.set("text", "");
-	},
+	detach: function() {},
 	
-	updateFilterInfo: function(num)
-	{
-		this.filterInfo.set("text", "(" + num + " after filtering)");
-	},
+	/* Reset the filter text to an empty string */
+	resetFilterInfo: function() { this.filterInfo.set("text", ""); },
+		
+	/* 
+	 * Set the number of objects after filtering database object names
+     * @param int num The number of objects after filtering	 
+	 */
+	updateFilterInfo: function(num) { this.filterInfo.set("text", "(" + num + " after filtering)"); },
 	
 	toElement: function() { return this.element; },
+	
+	/* Get and set methods */
+	setType: function(type) { this.setOptions({ "type" : type }); },
+	getType: function()     { return this.options.type; }
 });
 
+/**
+ * 
+ */
 var SelectAction = new Class(
 {
+	/*
+	 * @param MainWindow mainWindow The main window
+	 * @param String elementId the DOM elementId 
+	 */
 	initialize: function(mainWindow, elementId)
 	{
 		this.element = $(elementId);
@@ -331,8 +389,6 @@ var SelectAction = new Class(
 		this.setOptionType("none");		
 		this.attach();
 	},
-
-	toElement: function() { return this.element; },
 	
 	attach: function() {
 		$(this.performAction).addEvents(
@@ -427,8 +483,13 @@ var SelectAction = new Class(
 		this.getSelected().doAction();
 		this.mainWindow.resetChecked();
 	},
+	
+	toElement: function() { return this.element; },
 });
 
+/*
+ * TODO -- Parent class
+ */
 var ActionOption = new Class(
 {
 	initialize: function(selectParent)
@@ -442,6 +503,9 @@ var ActionOption = new Class(
 
 });
 
+/*
+ * TODO
+ */
 var AddToSelected = new Class(
 {
 	Extends: ActionOption,
@@ -462,6 +526,9 @@ var AddToSelected = new Class(
 	},
 });
 
+/* 
+ * TODO
+ */
 var RemoveFromSelected = new Class(
 {
 	Extends: ActionOption,
@@ -482,6 +549,9 @@ var RemoveFromSelected = new Class(
 	},
 });
 
+/* 
+ * TODO
+ */
 var AddToBasket = new Class(
 {
 	Extends: ActionOption,
@@ -502,6 +572,9 @@ var AddToBasket = new Class(
 	},
 });
 
+/* 
+ * TODO 
+ */
 var RemoveFromBasket = new Class(
 {
 	Extends: ActionOption,
@@ -522,29 +595,39 @@ var RemoveFromBasket = new Class(
 	},
 });
 
-
+/*
+ * Filtering the objects in the main window
+ * TODO. Set CSS classes instead of display options here.
+ */
 var Filter = new Class(
 {
 	Implements: Options,
 	options:
 	{
-		defaultText : 'Filter hit(s)'
+		defaultText  : 'Filter hit(s)',
+		colour       : '#bbb',
 	},
+	/*
+	 * @param String elementId The DOM element id 
+	 * @param MainWindow mainWindow The main window
+	 * @param Options options The object options
+	 */
 	initialize: function(elementId, mainWindow, options)
 	{
 		this.setOptions(options);
 		this.mainWindow = mainWindow;
-		this.element = $(elementId);
-		$(this).setStyle("color", "#bbb");
-		$(this).set("value", this.options.defaultText);
+		
+		this.setupDomElements(); 
 		this.attach();
 	},
 	
-	reset: function()
-	{
+	setupDomElements: function() 
+	{	
+		this.element = $(elementId);
+		$(this).setStyle("color", this.options.colour);
 		$(this).set("value", this.options.defaultText);
 	},
-	
+		
 	attach: function()
 	{
 		$(this).addEvents(
@@ -590,6 +673,10 @@ var Filter = new Class(
 		});
 	},	
 
+	/* Reset the text in the filter */
+	reset: function() { $(this).set("value", this.options.defaultText); },
+
+	/* Execute filtering among the rows in the main window */
 	filter: function()
 	{
 		input = $(this).get("value").toLowerCase();
@@ -607,14 +694,19 @@ var Filter = new Class(
 		this.mainWindow.updateFilterInfo(afterFilter);
 	},
 	
-	toElement: function()
-	{
-		return this.element;
-	},
+	toElement: function() { return this.element; },
 });
-	
+
+/* 
+ * Parent class for all database objects in the main window rows 
+ */ 
 var Row = new Class(
 {
+	/* 
+	 * @param MainWindow parentMainWindow The main window containing the row
+	 * @param Object data TODO
+	 * @param TODO
+	 */
 	initialize: function(parentMainWindow, data, collection)
 	{
 		this.parentMainWindow = parentMainWindow;
@@ -622,6 +714,9 @@ var Row = new Class(
 		this.collection = collection;
 	},
 	
+	detach: function() { $(this).removeEvents(); },
+	
+	/* TODO */
 	isInFilter: function()
 	{
 		if (this.collection.getValues().contains(this.data))
@@ -630,37 +725,29 @@ var Row = new Class(
 			return false;
 	},
 	
-	show: function()
-	{
-		$(this).setStyle("display", "block");
-	},
+	/* Show or hide the row */
+	show: function() { $(this).setStyle("display", "block"); },
+	hide: function() { $(this).setStyle("display", "none"); },
 	
-	hide: function()
-	{
-		$(this).setStyle("display", "none");
-	},
+	/* Check or uncheck the checkbox on the row 
+	 * @param boolean Checkthis True if row will be checked, false if row will be unchecked
+	 */
+	check: function(checkThis) { $(this.checkbox).set("checked", checkThis); },
 	
-	detach: function()
-	{
-		$(this).removeEvents();
-	},
-	
-	check: function(checkThis)
-	{
-		$(this.checkbox).set("checked", checkThis);
-	},
-	
-	isChecked: function()
-	{
-		return ($(this.checkbox).get("checked"));
-	},
+	/* @return boolean True if the row checkbox is checked, false if not. */
+	isChecked: function() { return ($(this.checkbox).get("checked")); },
 	
 	toElement: function() { return this.element; },
 });
 
+/* A row in the main window, representing a database. */
 var DatabaseRow = new Class(
 {
 	Extends: Row,
+	/*
+	 * @param MainWindow parentMainWindow The main window containing the row 
+	 * TODO...
+	 */
 	initialize: function(parentMainWindow, data, collection)
 	{
 		this.parent(parentMainWindow, data, collection);
@@ -671,26 +758,21 @@ var DatabaseRow = new Class(
 	
 	setupDomElements: function()
 	{
-		this.element = new Element('div', { 'class' : 'Row' });		
+		this.element   = new Element('div', { 'class' : 'Row' });		
 		this.headerDiv = new Element('div');
-
-		this.checkbox = new Element('input', { 'type' : 'checkbox' });
-		this.name = new Element('span', { 'class' : 'RowDatabase', 'text' : this.data });
+		this.checkbox  = new Element('input', { 'type' : 'checkbox' });
+		this.name      = new Element('span', { 'class' : 'RowDatabase', 'text' : this.data });
 	
-		$(this.headerDiv).inject($(this));
-		
+		$(this.headerDiv).inject($(this));	
 		$(this.checkbox).inject($(this.headerDiv));
 		$(this.name).inject($(this.headerDiv));
-
 	},
 	
-	attach: function()
-	{
-		
-	},
-	
+	attach: function() { },
+	detach: function() { },	
 });
 
+/* A row in the main window, representing a table. */
 var TableRow = new Class(
 {
 	Extends: Row,
@@ -725,29 +807,10 @@ var TableRow = new Class(
 		$(this.databaseColumn).inject($(this.headerDiv));
 		$(this.name).inject($(this.headerDiv));
 		$(this.basketDiv).setStyle("display", "none");
-		//if (this.parentMainWindow.main.basket.isInBasket(data))
-		//	$(this.element).setStyle("background-color", "#95C8FF");
 	},
 	
-	attach: function()
-	{
-		// $(this.name).addEvents(
-		// {
-			// "mouseenter" : function()
-			// {
-				// $(this.name).setStyle("cursor", "pointer");
-			// }.bind(this),
-			// "mouseleave" : function()
-			// {
-				// $(this.name).setStyle("cursor", "default");
-			// }.bind(this),
-			// "click": function()
-			// {
-				// this.showBasket();
-				// this.populateBasket();
-			// }.bind(this)
-		// });
-	},
+	attach: function() {},
+	detach: function() {},
 	
 	showBasket: function()
 	{
@@ -774,30 +837,17 @@ var TableRow = new Class(
 		}
 	},
 	
-	populateBasket: function()
-	{
-		
-	},
-	
+	/*
+	 * @param TODO
+	 */
 	handleResults: function(result)
 	{
-		this.spinner.hide();
-		// Check which of these are found in the basket.
-		var existsInBasket;
-		Array.each(result, function(fetchedColumn) 
-		{
-			console.log(fetchedColumn);
-			// existsInBasket = Window.main.basket.existsInBasket(fetchedColumn);
-			// if (existsInBasket)
-			// {
-				// this.drawTable(Window.main.basket.getBasketItem(fetc));
-			// }
-		}.bind(this));
+		this.spinner.hide();	
 	}	
 });
 
 /** 
- * DOM. Column in the rows.
+ * TODO. DOM. Column in the rows.
  */
 var ColumnRow = new Class(
 {
@@ -1168,6 +1218,9 @@ var Selection = new Class(
 	toElement: function() { return this.element; },
 });
 	
+/**
+ * Reads data from the MySQL server, and posts changes to the rest of the application.
+ */ 
 var DataHandler = new Class(
 {
 	initialize: function(main)
@@ -1175,7 +1228,11 @@ var DataHandler = new Class(
 		this.main = main;
 	},
 	
-	// Read data from the server.
+	/*
+  	 * Read data from the MySQL server and to send it on.
+	 * @param 
+	 * @param function returnFunction The function to run after receiving a response from the MySQL server 
+	 */
 	readData: function(data, returnFunction) 
 	{
 		var postVariable = "notcontainer=" + data.notcontainer + "&search=" + data.search + "&type=" + data.type + "&database=" + data.database + "&table=" + data.table + "&column=" + data.column + "&browse=1";
@@ -1184,7 +1241,7 @@ var DataHandler = new Class(
 		var readRequest = new Request(
 		{
 			
-			url: "php/readdata.php", 
+			url: "php/ui_readdata.php", 
 			method: 'post',
 			onRequest: function() 
 			{
@@ -1210,10 +1267,10 @@ var DataHandler = new Class(
 		readRequest.send(postVariable);
 	},
 	
-	sendResultsToMain: function(result)
-	{
-		this.main.setQueryResult(result);
-	},	
+	/* 
+	 * @param result Set the query result.
+	 */
+	sendResultsToMain: function(result) { this.main.setQueryResult(result); },	
 });
 	
 var InputField = new Class(
@@ -1329,6 +1386,9 @@ var BrowseButton = new Class(
 		toElement: function() { return this.element; },
 });
 
+/* 
+ *
+ */
 var DatabaseElementContainer = new Class(
 {
 	initialize: function(parentMain, elementId, collectionFooterId, browseButton)
@@ -2444,7 +2504,9 @@ var ColumnBasketItem = new Class(
 	attach: function() { },
 });
 
-/* BasketStructure */
+/* 
+ * BasketStructure 
+ */
 var BasketStructure = new Class(
 {
 	initialize: function() 
@@ -2545,5 +2607,3 @@ var BasketStructure = new Class(
 		return foundItem;
 	},
 });
-
-/* -------------------------------  BASKET ENDS -----------------  */
