@@ -6,9 +6,11 @@
 	* Creates the database containing information
 	* on the structure of the data warehouse. 
 	*/
- 
+
 	/* Testing mode */
 	$testing = true;
+	
+	require_once('auth_details.php');
 
 	/* Connect to MySQL database */
 	$connection = mysql_connect($hostname, $user, $password);
@@ -27,7 +29,7 @@
 	/* Create and select database */
 	$sql = 'CREATE DATABASE ' . $dbname;	
 	mysql_query($sql, $connection) or die ('Could not create database.');
-	mysql_select_db($dbName) or die('Cannot select database'); 	
+	mysql_select_db($dbname) or die('Cannot select database'); 	
 
 
 	/* Create lookup table for databases */
@@ -83,8 +85,7 @@
 	
 	/* Close connection to database */
 	mysql_close($connection);
-
-	// Close the database connection
-	mysql_close($connection);
+	
+	echo "Creation complete.";
 
 ?>

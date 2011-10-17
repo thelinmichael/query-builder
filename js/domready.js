@@ -295,12 +295,16 @@ var MainWindow = new Class(
 	 * @param Array<>
 	 */
 	massageData: function(dataArray)
-	{		
-		this.selectBox.setOptionType(this.type);	
+	{	
+		if (typeOf(dataArray) == "null") throw Error("dataArray not set");
+		if (typeOf(this.getType()) == "null") throw Error("Type not set when massaging data."); 
+					
 		this.rows.empty();		
 		this.clean();
 		this.resetFilterInfo();
 		this.filter.reset();
+		
+		this.selectBox.setOptionType(this.getType());
 		
 		if (dataArray.length > this.options.maxHits) 
 		{
@@ -372,7 +376,7 @@ var MainWindow = new Class(
 });
 
 /**
- * 
+ * TODO
  */
 var SelectAction = new Class(
 {
@@ -390,7 +394,8 @@ var SelectAction = new Class(
 		this.attach();
 	},
 	
-	attach: function() {
+	attach: function() 
+	{
 		$(this.performAction).addEvents(
 		{
 			'mouseenter' : function() { $(this.performAction).setStyles({ 'background-color' : '#666', 'cursor': 'pointer' }); }.bind(this),
@@ -398,11 +403,10 @@ var SelectAction = new Class(
 			'click' : function() { this.perform(); }.bind(this)
 		});
 	},
+	detach: function() {},
 	
-	reset: function()
-	{
-		this.setOptionType("none");
-	},
+	/* Reset the type of the drop down menu. */
+	reset: function() { this.setOptionType("none"); },
 	
 	addPerformOption: function(option)
 	{
@@ -410,12 +414,15 @@ var SelectAction = new Class(
 		this.performOptions.push(option);
 	},
 	
+	/* Remove an option from the drop down menu. 
+	 * @param ActionOption option An option in the drop down menu. */
 	removePerformOption: function(option)
 	{
 		this.performOptions.erase(option);
 		$(option).destroy();
 	},
 	
+	/* Remove all the options in the drop down menu. */
 	removeAllPerformOptions: function()
 	{
 		var i;
@@ -426,23 +433,26 @@ var SelectAction = new Class(
 		}	
 	},
 	
+	/* 
+	 * Set the options in the drop down menu above the main window,
+	 * which determines what to do with checked objects.
+	 * @param String type The type of the database object
+	 */
 	setOptionType: function(type)
 	{
-		if (type == "none")
-		{
-			this.removeAllPerformOptions(); // remove all options.
-		}
+		
+		/* No type is given, happens at start. Removing all options. */
+		this.removeAllPerformOptions();  
+		
+		if (type == "none") { }
+		
 		else if (type == "database")
 		{
-			this.removeAllPerformOptions(); // remove all options. 
-			// add options that are relevant to databases.
 			this.addPerformOption(new AddToSelected(this));
 			this.addPerformOption(new RemoveFromSelected(this));
 		}
 		else if (type == "table")
 		{
-			this.removeAllPerformOptions(); // remove all options. 
-			// add options that are relevant to tables.
 			this.addPerformOption(new AddToSelected(this));
 			this.addPerformOption(new RemoveFromSelected(this));
 			this.addPerformOption(new AddToBasket(this));
@@ -451,8 +461,6 @@ var SelectAction = new Class(
 		}
 		else if (type == "column")
 		{
-			this.removeAllPerformOptions(); // remove all options. 
-			// add options that are relevant to columns.
 			this.addPerformOption(new AddToSelected(this));
 			this.addPerformOption(new RemoveFromSelected(this));
 			this.addPerformOption(new AddToBasket(this));
@@ -462,6 +470,9 @@ var SelectAction = new Class(
 			throw new Error("Could not perform action. Could not identify type.");
 	},
 	
+	/* Get the value of the drop down menu which is selected.
+	 * @return String The value in the drop down menu which is selected.
+	 */
 	getSelected: function()
 	{
 		var selectedValue = null;
@@ -478,6 +489,9 @@ var SelectAction = new Class(
 		return selectedValue;
 	},
 	
+	/* Perform action to database objects in the main window.
+	   Action is chosen in the drop down select menu. 
+	   Also set the checked boxes to unchecked. */
 	perform: function()
 	{
 		this.getSelected().doAction();
@@ -616,6 +630,7 @@ var Filter = new Class(
 	{
 		this.setOptions(options);
 		this.mainWindow = mainWindow;
+		this.elementId  = elementId;
 		
 		this.setupDomElements(); 
 		this.attach();
@@ -623,7 +638,7 @@ var Filter = new Class(
 	
 	setupDomElements: function() 
 	{	
-		this.element = $(elementId);
+		this.element = $(this.elementId);
 		$(this).setStyle("color", this.options.colour);
 		$(this).set("value", this.options.defaultText);
 	},

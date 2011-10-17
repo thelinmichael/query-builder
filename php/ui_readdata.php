@@ -40,7 +40,7 @@
 	 */
 	if ($browse || is_string($search) && strlen($search) > 2 && strlen($search) < 64)
 	{
-		$dbh = new PDO('mysql:host=.' . $hostname . ';dbname=' . $dbname, $user, $pass);
+		$dbh = new PDO('mysql:host=' . $hostname . ';dbname=' . $dbname, $user, $password);
 		
 		/* User wants to retrieve database names. */
 		if ($type == "database")

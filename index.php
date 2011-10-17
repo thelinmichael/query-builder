@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<title>
-			eBay Self Service Database Webapplication
+			Self Service Database Webapplication
 		</title>
 		<script type="text/javascript" src="js/thirdparty/mootools-core-1.3.1-full-compat.js"></script>
 		<script type="text/javascript" src="js/thirdparty/mootools-more-1.3.1.1.js"></script>
