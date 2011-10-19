@@ -256,11 +256,11 @@ var MainWindow = new Class(
 		var collection;
 		
 		/* Check type of objects in the main window and set which type of collection is getting (de)seleted */
-		if (this.type == "database") 
+		if (this.getType() == "database") 
 			collection = this.main.databaseCollection;	
-		else if (this.type == "table")
+		else if (this.getType() == "table")
 			collection = this.main.tableCollection;
-		else if (this.type == "column")
+		else if (this.getType() == "column")
 			collection = this.main.columnCollection;
 		else
 			throw new Error("Could not identify type.");
@@ -296,7 +296,7 @@ var MainWindow = new Class(
 	 */
 	massageData: function(dataArray)
 	{	
-		if (typeOf(dataArray) == "null") throw Error("dataArray not set");
+		if (typeOf(dataArray) == "null") throw Error("dataArray not set -- No input to main window.");
 		if (typeOf(this.getType()) == "null") throw Error("Type not set when massaging data."); 
 					
 		this.rows.empty();		
@@ -312,15 +312,15 @@ var MainWindow = new Class(
 		}
 		Array.each(dataArray, function(data) 
 		{
-			if (this.type == "database") 
+			if (this.getType() == "database") 
 				this.rows.push(new DatabaseRow(this, data, this.main.databaseCollection));	
-			else if (this.type == "table")
+			else if (this.getType() == "table")
 				this.rows.push(new TableRow(this, data, this.main.tableCollection));
-			else if (this.type == "column")
+			else if (this.getType() == "column")
 				this.rows.push(new ColumnRow(this, data, this.main.columnCollection));
 		}.bind(this));
 		Array.each(this.rows, function(row)
-		{
+		{	
 			$(row).inject($(this));
 		}.bind(this));
 	},
@@ -1357,8 +1357,18 @@ var InputField = new Class(
 	toElement: function() { return this.element; },	
 });
 
+/* Display database objects in the main window, matching whatever is selected 
+ * in the database structure one step up. For example, displays all columns for
+ * two specific, selected tables. For databases, all of them are shown in the 
+ * main window.
+ */
 var BrowseButton = new Class(
 {
+	/*
+	 * @param Main main The main class
+	 * @param String type The type of the database object (database, table, column, none).
+	 * @param String elementId The DOM element id for this element
+	 */
 	initialize: function(main, type, elementId)
 	{
 		this.element = $(elementId);
@@ -1383,7 +1393,7 @@ var BrowseButton = new Class(
 				$(this).setStyle("text-decoration", "none");
 			}.bind(this),
 			'click' : function(e)
-			{			
+			{	
 				e.stop();
 				this.main.readData(this.type, true);				
 			}.bind(this),
@@ -1391,14 +1401,12 @@ var BrowseButton = new Class(
 		return this;
 	},
 	
-	setText: function(text)
-	{
-		$(this).set("text", text);
-	},
+	/* Set the value of the text node in this DOM element */
+	setText: function(text) { $(this).set("text", text); },
 	
 	getType: function() { return this.type; },
 	
-		toElement: function() { return this.element; },
+	toElement: function() { return this.element; },
 });
 
 /* 

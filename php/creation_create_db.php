@@ -37,7 +37,8 @@
 	"CREATE TABLE database_lookup
 	(
 		database_id INT AUTO_INCREMENT PRIMARY KEY,
-		database_name varchar(50)
+		database_name varchar(50),
+		UNIQUE (database_name)
 	)";
 	mysql_query($sql, $connection) or die("Could not create table.");		
 
@@ -50,7 +51,6 @@
 		table_name varchar(50)
 	)";
 	mysql_query($sql, $connection) or die("Could not create table.");		
-
 
 	/* Create fact table */
 	$sql = 
