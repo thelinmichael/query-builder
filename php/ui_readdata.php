@@ -45,8 +45,8 @@
 		/* User wants to retrieve database names. */
 		if ($type == "database")
 		{	
-			$queryString = "SELECT database_name FROM database_lookup WHERE database_name LIKE ?";
-			$rowname = "database_name";
+			$queryString = "SELECT DISTINCT database_name FROM database_lookup WHERE database_name LIKE ?";
+			$rowname     = "database_name";
 		}
 		
 		/* User wants to retrieve table names. */
@@ -138,12 +138,12 @@
 								table_lookup AS t, database_lookup AS d, column_fact AS f 
 								WHERE t.table_id = f.table_id 
 								AND f.database_id = d.database_id 
-								AND f.column_name LIKE ?";
+								AND f.column_name LIKE ?";					
 		}
 		else
 			die("Could not read type.");
-			
-		/* Prepare and execute the database query */	
+	
+     	/* Prepare and execute the database query */	
 		$stmt = $dbh->prepare($queryString);
 		if ($stmt->execute(array($search . '%') ) )
 		{
@@ -151,8 +151,9 @@
 			while (($row = $stmt->fetch()))
 			{
 				/* Put the results into the output */
-				if ($type == "database")
+				if ($type == "database") {					
 					$result[] = $row['database_name'];
+				}
 				else if ($type == "table")
 					$result[] = $row['database_name'] . "." . $row['table_name'];
 				else if ($type == "column")
