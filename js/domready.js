@@ -1233,9 +1233,7 @@ var Selection = new Class(
 	toElement: function() { return this.element; },
 });
 	
-/**
- * Reads data from the MySQL server, and posts changes to the rest of the application.
- */ 
+/* Reads data from the MySQL server, and posts changes to the rest of the application */ 
 var DataHandler = new Class(
 {
 	initialize: function(main)
@@ -1245,13 +1243,13 @@ var DataHandler = new Class(
 	
 	/*
   	 * Read data from the MySQL server and to send it on.
-	 * @param 
+	 * @param TODO data
 	 * @param function returnFunction The function to run after receiving a response from the MySQL server 
 	 */
 	readData: function(data, returnFunction) 
 	{
 		var postVariable = "notcontainer=" + data.notcontainer + "&search=" + data.search + "&type=" + data.type + "&database=" + data.database + "&table=" + data.table + "&column=" + data.column + "&browse=1";
-		// Get data from server.
+		
 		var that = this;
 		var readRequest = new Request(
 		{
@@ -1282,12 +1280,12 @@ var DataHandler = new Class(
 		readRequest.send(postVariable);
 	},
 	
-	/* 
-	 * @param result Set the query result.
-	 */
+	/* Set the query result
+	 * @param String result  */
 	sendResultsToMain: function(result) { this.main.setQueryResult(result); },	
 });
-	
+
+/* Inputfield */	
 var InputField = new Class(
 {
 	Implements: Options,
@@ -1299,6 +1297,10 @@ var InputField = new Class(
 		defaultText : ''
 	},
 	
+	/* @param Main The main object of this program
+	 * @param String elementId TODO
+	 * @param Options options TODO
+	 */
 	initialize: function(main, elementId, options)
 	{
 		this.setOptions(options);
@@ -1403,17 +1405,19 @@ var BrowseButton = new Class(
 	
 	/* Set the value of the text node in this DOM element */
 	setText: function(text) { $(this).set("text", text); },
-	
-	getType: function() { return this.type; },
-	
+	getType: function() { return this.type; },	
 	toElement: function() { return this.element; },
 });
 
-/* 
- *
- */
+/* Container for the database objects that are chosen by the AddCollection button. */
 var DatabaseElementContainer = new Class(
 {
+	/*
+	 * @param Main parentMain The main class of this program
+	 * @param String elementId The element id of this DOM element
+	 * @param String collectionFooterId The element id of the footer DOM element
+	 * @param BrowseButton browseButton The browse button/link belonging to this collection
+	 */
 	initialize: function(parentMain, elementId, collectionFooterId, browseButton)
 	{
 		this.parentMain = parentMain;
@@ -1448,14 +1452,16 @@ var DatabaseElementContainer = new Class(
 		$(this.removeAll).addEvents({ 'mouseenter' : function() { $(this.removeAll).setStyle("cursor", "pointer"); $(this.removeAll).setStyle("text-decoration", "underline"); }.bind(this), 
 									  'mouseleave' : function() { $(this.removeAll).setStyle("cursor", "default"); $(this.removeAll).setStyle("text-decoration", "none"); }.bind(this),
 									  'click' : function() { this.removeAllRows(); }.bind(this)
-									 });
+									});
 		
 		$(this.showHideAll).addEvents({ 'mouseenter' : function() { $(this.showHideAll).setStyle("cursor", "pointer"); $(this.showHideAll).setStyle("text-decoration", "underline"); }.bind(this),
 									    'mouseleave' : function() { $(this.showHideAll).setStyle("cursor", "default"); $(this.showHideAll).setStyle("text-decoration", "none"); }.bind(this),
 									    'click' : function() { this.toggleShowCollection(); }.bind(this)
-									  });
+									});
 	},
 	
+	/* Adds a database object to the collecetion 
+	 * @param DatabaseElement databaseElement The databaseelement that is added to the collection  */
 	add: function(databaseElement)		
 	{
 		var alreadyExists = Array.some(this.databaseElements, function(existingElement)
@@ -1471,6 +1477,8 @@ var DatabaseElementContainer = new Class(
 		this.updateFooter();
 	},
 	
+	/* Removes a database object from the collection
+	 * @param DatabaseElement databaseElement The databaseelement from the collection */
 	remove: function(databaseElement)
 	{
 		this.databaseElements.erase(databaseElement);
@@ -1479,6 +1487,7 @@ var DatabaseElementContainer = new Class(
 		this.updateFooter();
 	},
 	
+	/* Remove all database objects from the collection */
 	removeAllRows: function()
 	{	
 		if (this.expanded)
@@ -1490,10 +1499,10 @@ var DatabaseElementContainer = new Class(
 		});
 		this.databaseElements.empty();
 		this.updateBrowseButton();
-		this.updateFooter();
-		
+		this.updateFooter();		
 	},
 	
+	/* Expands and contracts the collection */
 	toggleShowCollection: function()
 	{	
 		if (this.expanded)
@@ -1559,6 +1568,8 @@ var DatabaseElementContainer = new Class(
 		}		
 	},
 	
+	/* TODO 
+	 * @param String text Name of the database object to be removed */
 	removeJustText: function(text)
 	{
 		Array.each(this.databaseElements, function(databaseElement)
@@ -1571,13 +1582,13 @@ var DatabaseElementContainer = new Class(
 		}.bind(this));
 	},
 	
+	/* Update the footer containing text about contracting and expanding the collection */
 	updateFooter: function()
 	{
 		if (this.databaseElements.length > 2)
 		{
 			this.removeAll.set("text", "Remove all"); 
 			this.showHideAll.set("text", "Expand");
-			// show "show all" text if it is not there already.
 		}
 		else if (this.databaseElements.length >= 0 && this.databaseElements.length <= 2)
 		{
@@ -1589,6 +1600,7 @@ var DatabaseElementContainer = new Class(
 		}	
 	},
 	
+	/* Update the browse button/link text below the input field */
 	updateBrowseButton: function()
 	{
 		if (this.browseButton == null)
@@ -1613,17 +1625,24 @@ var DatabaseElementContainer = new Class(
 		}
 	},
 	
-	getValues: function() { return this.databaseElements; },
-	
+	getValues: function() { return this.databaseElements; },	
 	toElement: function() { return this.element; },
 });	
-	
+
+/* The database object in the collection belonging to an input field. */ 
 var DatabaseElement = new Class(
 {	
 	Implements: Options,
-	options: {
+	options: 
+	{
 		"maxNameLength" : 11 // must be above 2.
 	},
+	
+	/*
+	 * @param DatabaseElementContainer DatabaseElementContainer The collection which holds this element
+	 * @param String name The name shown on the element 
+	 * @param Options options The options belonging to this object
+	 */
 	initialize: function(parentDatabaseElementContainer, name, options)
 	{
 		this.setOptions(options);
@@ -1633,32 +1652,31 @@ var DatabaseElement = new Class(
 		var dataBreakdown = this.name.split('.');
 		if (dataBreakdown.length == 1)
 		{
-			this.type = "database";
-			this.name = dataBreakdown[0];
+			this.type  = "database";
+			this.name  = dataBreakdown[0];
 			this.title = "Database: " + dataBreakdown[0];
 		}
 		else if (dataBreakdown.length == 2)
 		{
-			this.type = "table";
-			this.name = dataBreakdown[1];
+			this.type  = "table";
+			this.name  = dataBreakdown[1];
 			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1];
 		}
 		else if (dataBreakdown.length == 3)
 		{
-			this.type = "column";
-			this.name = dataBreakdown[2];
+			this.type  = "column";
+			this.name  = dataBreakdown[2];
 			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1] + " Column: " + dataBreakdown[2];
 		}
 		else
-			throw new Error("Could not idfentify type of database element.");
+			throw new Error("Could not identify type of database element.");
 		this.setupDomElements();
 		
 		return this;
 	},
 	
 	setupDomElements: function()
-	{
-		
+	{		
 		this.setElement(new Element('span', { 'class' : 'DatabaseElement', 'title' : this.title } ));
 		
 		if (this.name.length > this.options.maxNameLength) 
@@ -1698,28 +1716,29 @@ var DatabaseElement = new Class(
 		});
 		return this;
 	},
-	
-	setElement: function(element)
-	{
-		this.element = element;
-	},
-	
-	getName: function()
-	{
-		return this.name;
-	},
-	
-	toElement: function() { return this.element },	
+		
+	toElement: function() { return this.element },
+	setElement: function(element) { this.element = element; },
+	getName: function() { return this.name; },
 });
 
+/*
+ * Button that adds the element in the input box to the collection of 
+ * selected elements.
+ */
 var CollectionAdd = new Class(
 {
+	/* 
+	 * @param Main parentMain The main class of this program
+	 * @param DatabaseElementContainer collection The collection of element
+	 * @param String elementId The id of the DOM element representing this element
+	 */
 	initialize: function(parentMain, collection, inputField, elementId)
 	{
 		this.parentMain = parentMain;
 		this.collection = collection;
 		this.inputField = inputField;
-		this.element = $(elementId);
+		this.element    = $(elementId);
 		
 		this.setupDomElements();
 		
@@ -1728,15 +1747,14 @@ var CollectionAdd = new Class(
 	
 	setupDomElements: function()
 	{
+		/* SVG string representing a + sign. */
 		plusSVG = "M25.979,12.896 19.312,12.896 19.312,6.229 12.647,6.229 12.647,12.896 5.979,12.896 5.979,19.562 12.647,19.562 12.647,26.229 19.312,26.229 19.312,19.562 25.979,19.562z";
-		//rightSVG = "M10.129,22.186 16.316,15.999 10.129,9.812 13.665,6.276 23.389,15.999 13.665,25.725z";
 		
 		this.raphaelHolder = new Element('span', { 'class' : 'RaphaelHolder' });
 		$(this.raphaelHolder).inject($(this));
 		
 		var paper = Raphael($(this.raphaelHolder), 15, 23);	
-		this.path = paper.path(plusSVG).attr({fill: "#666", stroke: "none"}).scale(0.7).translate(-8, 0);
-	
+		this.path = paper.path(plusSVG).attr({fill: "#666", stroke: "none"}).scale(0.7).translate(-8, 0);	
 	},
 	
 	attach: function() 
@@ -1767,6 +1785,7 @@ var CollectionAdd = new Class(
 		return this;
 	},
 	
+	/* When the button is pressed, the value in the inputfield is added to the collection */
 	add: function()
 	{
 		if ($(this.inputField).get("value") != this.inputField.options.defaultText)
@@ -1779,9 +1798,7 @@ var CollectionAdd = new Class(
 	toElement: function() { return this.element; },	
 });	
 
-/**
- *  Submit Icon?
- */ 
+/* Submit button, tells the main window to show the database objects in the collection. */ 
 var Submit = new Class(
 {
 	initialize: function(main, collection, type, elementId)
@@ -1797,6 +1814,7 @@ var Submit = new Class(
 	
 	setupDomElements: function()
 	{
+		/* SVG string for a -> button */
 		rightSVG = "M10.129,22.186 16.316,15.999 10.129,9.812 13.665,6.276 23.389,15.999 13.665,25.725z";
 		
 		this.raphaelHolder = new Element('span', { 'class' : 'RaphaelHolder' });
