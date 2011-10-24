@@ -232,6 +232,12 @@ input {
 	border-color: #ccc;
 	padding: 5px 0px;
 }
+
+.RowTr 
+{
+	width: 80%;
+}
+
 .RowFilter
 {
 	background-color: #73A6FF;
@@ -469,6 +475,7 @@ input {
 	font-variant: small-caps;
 }
 .RowDatabase {
+	width: 20%;
 	font-family: arial;
 	font-size: 13;
 	margin: 0px 10px 0px 10px;
@@ -477,14 +484,14 @@ input {
 	overflow: hidden;
 }
 .RowTable {
+	width: 30%;
 	font-family: arial;
 	font-size: 13;
 	margin: 0px 10px 0px 10px;
-	min-width: 300px;
-	max-width: 300px;
 	overflow: hidden;
 }
 .RowColumn {
+	width:40%;
     font-family: Arial;
     font-size: 14px;
     margin-left: 10px;
@@ -494,6 +501,15 @@ input {
     min-width: 250px;
     overflow: hidden;
 	font-weight: bold;
+}
+.ViewNotSupported {
+	width:70%;
+    font-family: Helvetica;
+    font-size: 12px;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 0;
+	color: #666666;
 }
 .Aggregation {
 	background-color: #EEEEEE;

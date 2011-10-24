@@ -375,9 +375,7 @@ var MainWindow = new Class(
 	getType: function()     { return this.options.type; }
 });
 
-/**
- * TODO
- */
+/* Controlling which options are available to do with checked row objects */
 var SelectAction = new Class(
 {
 	/*
@@ -454,10 +452,7 @@ var SelectAction = new Class(
 		else if (type == "table")
 		{
 			this.addPerformOption(new AddToSelected(this));
-			this.addPerformOption(new RemoveFromSelected(this));
-			this.addPerformOption(new AddToBasket(this));
-			this.addPerformOption(new RemoveFromBasket(this));
-			
+			this.addPerformOption(new RemoveFromSelected(this));			
 		}
 		else if (type == "column")
 		{
@@ -517,9 +512,7 @@ var ActionOption = new Class(
 
 });
 
-/*
- * TODO
- */
+/* Action to do with checked rows -- adds all checked row objects to the collection of selected objects */
 var AddToSelected = new Class(
 {
 	Extends: ActionOption,
@@ -540,9 +533,7 @@ var AddToSelected = new Class(
 	},
 });
 
-/* 
- * TODO
- */
+/* Action to do with checked rows -- removes all checked row objects from the collection of selected objects */
 var RemoveFromSelected = new Class(
 {
 	Extends: ActionOption,
@@ -563,9 +554,7 @@ var RemoveFromSelected = new Class(
 	},
 });
 
-/* 
- * TODO
- */
+/* Adds all checked objects to the basket */
 var AddToBasket = new Class(
 {
 	Extends: ActionOption,
@@ -586,9 +575,7 @@ var AddToBasket = new Class(
 	},
 });
 
-/* 
- * TODO 
- */
+/* Removes all checked objects from the basket. */
 var RemoveFromBasket = new Class(
 {
 	Extends: ActionOption,
@@ -862,18 +849,24 @@ var TableRow = new Class(
 });
 
 /** 
- * TODO. DOM. Column in the rows.
+ * A column row in the main window
  */
 var ColumnRow = new Class(
 {
 	Extends: Row,
+	/* @param MainWindow parentMainWindow  
+	 * @param TODO data 
+	 * @param TODO collection
+	 */
 	initialize: function(parentMainWindow, data, collection)
 	{
 		this.parent(parentMainWindow, data, collection);
+		
 		var dataBreakdown = this.data.split('.');
 		this.database = dataBreakdown[0];
 		this.table = dataBreakdown[1];
 		this.column = dataBreakdown[2];
+		
 		this.setupDomElements();
 		this.attach();
 		this.updateAddRemove();
@@ -901,16 +894,12 @@ var ColumnRow = new Class(
 		
 		$(this.basketDiv).setStyle("display" , "none");		
 		
-		this.aggregationDiv = new Aggregation(this);
 		this.conditionsDiv = new Condition(this);
 		this.addDiv = new Element('div', { 'class' : 'ColumnAdd'  });
 		
-		$(this.aggregationDiv).inject($(this.basketDiv));
 		$(this.conditionsDiv).inject($(this.basketDiv));
 		$(this.addDiv).inject($(this.basketDiv));
-		// Basket.
 		
-		// Add/Remove part.
 		this.addButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Add to basket' });
 		this.removeButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Remove from basket' });
 		$(this.addButton).inject($(this.addDiv));
@@ -1001,59 +990,7 @@ var ColumnRow = new Class(
 	},
 });
 
-var Aggregation = new Class(
-{
-	initialize: function()
-	{
-		this.element = new Element('div', { 'class' : 'Aggregation' });
-		this.aggregationActive = false;
-		this.optionsArray = new Array();
-		this.setupDomElements();
-		this.attach();
-	},
-	
-	setupDomElements: function()
-	{	
-		this.activateAggregation = new Element('span', { 'id' : 'ActivateAggregation', 'text' : 'Aggregation' });
-		
-		this.aggregationSelect = new Element('select');
-		this.optionsArray.push(new Element('option', { 'value' : 'None', 'text' : 'None' }));
-		this.optionsArray.push(new Element('option', { 'value' : 'Sum (SUM)', 'text' : 'Sum (SUM)' }));
-		this.optionsArray.push(new Element('option', { 'value' : 'Average (AVG)', 'text' : 'Average (AVG)' }));
-		this.optionsArray.push(new Element('option', { 'value' : 'Minimum (MIN)', 'text' : 'Minimum (MIN)' }));
-		this.optionsArray.push(new Element('option', { 'value' : 'Maximum (MAX)', 'text' : 'Maximum (MAX)' }));
-		
-		Array.each(this.optionsArray, function(option)
-		{
-			$(option).inject($(this.aggregationSelect));
-		}.bind(this));
-		
-		this.aggregationInfo = new Element('span', { 'id' : 'aggregationInfo' });
-		
-		$(this.activateAggregation).inject($(this));
-		$(this.aggregationSelect).inject($(this));
-		$(this.aggregationInfo).inject($(this));
-	},
-	
-	attach: function()
-	{	
-		 $(this.aggregationSelect).addEvents(
-		{
-			"change" : function()
-			{
-				if ($(this.aggregationSelect).get("value") != "None")
-				{
-					$(this.aggregationInfo).set("text", "Aggregaton selected. Choose how group the results in the Tree View of the basket.");
-				}
-				else 
-					$(this.aggregationInfo).set("text", "");
-			}.bind(this),
-		}); 
-	},
-	
-	toElement: function() { return this.element; },
-});
-
+/* Condition in the Main window, column view */
 var Condition = new Class(
 {
 	initialize: function()
@@ -2088,6 +2025,8 @@ var BasketTreeView = new Class(
 	},
 });
 
+/* Shows what connections (i.e. foreign key relationships) are in the basket 
+ * NOT SUPPORTED. */
 var BasketConnectionView = new Class(
 {
 	Extends: BasketView,
@@ -2101,7 +2040,10 @@ var BasketConnectionView = new Class(
 	setupBasketBodyType: function()
 	{
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
-		var noSupport = new Element(''); 
+		this.notSupportedDiv = new Element('div', { 'class' : 'ViewNotSupported' , 'text' : 'This view is meant to show the chosen database objects in terms of connections, i.e. which columns are dependent on each other by foreign keys, so that joins are visible. Not supported in this version.' });
+		
+		$(this.notSupportedDiv).inject($(this.basketBodyType));
+		
 		return this.basketBodyType;
 	},
 });
@@ -2120,6 +2062,9 @@ var BasketPseudoView = new Class(
 	setupBasketBodyType: function()
 	{
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		this.notSupportedDiv = new Element('div', { 'class' : 'ViewNotSupported' , 'text' : 'This view is meant to show the chosen database objects listed in pseudo SQL. Not supported in this version.' });
+		
+		$(this.notSupportedDiv).inject($(this.basketBodyType));
 		
 		return this.basketBodyType;
 	},
@@ -2531,7 +2476,6 @@ var ColumnBasketItem = new Class(
 	initialize: function(basketParent)
 	{
 		this.parent(basketParent);
-		this.aggregated = false;
 	},
 	
 	setupDomElements: function()	

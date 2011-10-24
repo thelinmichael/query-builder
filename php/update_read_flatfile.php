@@ -52,7 +52,7 @@
 				$sametable = true;
 			else
 			{
-				$data[1] = $table; 		// new database. perform existance check later.
+				$table = $data[1]; 		// new database. perform existance check later.
 				$sametable = false;
 				$currentTableId++;		// add to the total amounts of tables.
 			}

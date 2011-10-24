@@ -29,7 +29,7 @@
 		if (isset($database)) { $database = explode(",", $database); }
 		if (isset($table))    { $table    = explode(",", $table); }
 		if (isset($column))   { $column   = explode(",", $column); }
-	}
+	}	
 
 	/* Results (output) */
 	$result = array();
@@ -52,11 +52,12 @@
 		/* User wants to retrieve table names. */
 		else if ($type == "table") 
 		{
-			$rowname = "table_name";
+			$rowname = "table_name"; 
+			/* Database values have been set */
 			if (isset($database) && sizeof($database) > 0 && strlen($database[0]) > 0)
-			{
-				$queryString = "SELECT distinct d.database_name, t.table_name FROM table_lookup AS t, database_lookup AS d, column_fact AS f  
-								WHERE t.table_id = f.table_id AND t.table_name LIKE ? AND f.database_id = d.database_id AND d.database_name IN (";
+			{				
+				$queryString = "SELECT distinct d.database_name, t.table_name FROM table_lookup AS t, database_lookup AS d, column_fact AS f
+				 				WHERE t.table_id = f.table_id AND t.table_name LIKE ? AND f.database_id = d.database_id AND d.database_name IN (";					
 				for ($i = 0; $i < sizeof($database); $i++)
 				{
 					$queryString = $queryString . "'" . $database[$i] . "'";
@@ -66,6 +67,7 @@
 						$queryString = $queryString . ")";
 				}
 			}			
+			/* No database is set */
 			else
 				$queryString = "SELECT distinct d.database_name, t.table_name FROM table_lookup AS t, database_lookup AS d, column_fact AS f
 								WHERE t.table_id = f.table_id AND f.database_id = d.database_id AND t.table_name LIKE ?";
@@ -165,5 +167,4 @@
 	/* Set header to JSON and return the result as a JSON formatted string */
 	header('Content-type: application/json');
 	echo json_encode($result);
- 		
 ?>
