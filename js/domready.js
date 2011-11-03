@@ -864,7 +864,7 @@ var ColumnRow = new Class(
 		
 		var dataBreakdown = this.data.split('.');
 		this.database = dataBreakdown[0];
-		this.table = dataBreakdown[1];
+		this.table  = dataBreakdown[1];
 		this.column = dataBreakdown[2];
 		
 		this.setupDomElements();
@@ -894,15 +894,17 @@ var ColumnRow = new Class(
 		
 		$(this.basketDiv).setStyle("display" , "none");		
 		
-		this.conditionsDiv = new Condition(this);
+		conditionsDiv = new Condition(this);
 		this.addDiv = new Element('div', { 'class' : 'ColumnAdd'  });
 		
-		$(this.conditionsDiv).inject($(this.basketDiv));
+		$(conditionsDiv).inject($(this.basketDiv));
 		$(this.addDiv).inject($(this.basketDiv));
 		
-		this.addButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Add to basket' });
-		this.removeButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Remove from basket' });
-		$(this.addButton).inject($(this.addDiv));
+		this.saveButton   = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Save' });
+		this.cancelButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Cancel' });
+		this.removeButton = new Element('span', { 'class' : 'ColumnRowButton', 'text' : 'Remove' });
+		$(this.saveButton).inject($(this.addDiv));
+		$(this.cancelButton).inject($(this.addDiv));
 		$(this.removeButton).inject($(this.addDiv));
 		
 		this.updateAddRemove();
@@ -925,17 +927,17 @@ var ColumnRow = new Class(
 				this.toggleBasket();
 			}.bind(this)
 		});
-		$(this.addButton).addEvents(
+		$(this.saveButton).addEvents(
 		{
 			'mouseenter': function()
 			{
-				$(this.addButton).setStyle("cursor" ,  "pointer" );
-				$(this.addButton).setStyle("text-decoration" ,  "underline" );
+				$(this.saveButton).setStyle("cursor" ,  "pointer" );
+				$(this.saveButton).setStyle("text-decoration" ,  "underline" );
 			}.bind(this),
 			'mouseleave': function()
 			{
-				$(this.addButton).setStyle("cursor" , "default");
-				$(this.addButton).setStyle("text-decoration" ,  "none" );
+				$(this.saveButton).setStyle("cursor" , "default");
+				$(this.saveButton).setStyle("text-decoration" ,  "none" );
 			}.bind(this),
 			'click': function()
 			{	
@@ -971,111 +973,101 @@ var ColumnRow = new Class(
 		/* Put remove-button if already in the basket */
 		if (this.isInBasket)
 		{
-			$(this.addButton).setStyle("display", "none");
+			$(this.saveButton).setStyle("display", "none");
 			$(this.removeButton).setStyle("display", "inline");
 		}
 		/* Put add-button if not in the basket */
 		else
 		{
 			$(this.removeButton).setStyle("display", "none");
-			$(this.addButton).setStyle("display", "inline");
+			$(this.saveButton).setStyle("display", "inline");
 		}
 	},
 	
 	toggleBasket: function()
-	{	if ($(this.basketDiv).getStyle("display") == "none")
+	{	
+		if ($(this.basketDiv).getStyle("display") == "none")
 			$(this.basketDiv).setStyle("display" ,"block");
 		else
 			$(this.basketDiv).setStyle("display" ,"none");
-	},
+	},	
 });
 
 /* Condition in the Main window, column view */
 var Condition = new Class(
 {
-	initialize: function()
+	/* @param Row parentRow The row using this condition. */
+	initialize: function(parentRow)
 	{
+		this.parentRow = parentRow;
+		this.selections = new Array;
 		this.element = new Element('div', { 'class' : 'Conditions' });
 		this.setupDomElements();
-		this.attach();
 	},
 	
 	setupDomElements: function()
 	{
 		this.conditionHeaderDiv = new Element('div', { 'class' : 'conditionHeaderDiv' });
-		this.conditionHeader = new Element('span', { 'id' : 'ConditionHeader', 'text' : 'Conditions' });
-		//this.conditionHeaderHelp = new Element('span', { 'id' : 'ConditionHeaderHelp' ,'text' :  'Conditions for wanted value. (WHERE or HAVING)' });
-		
-		this.selection = new Selection(this);
-		
-		this.anotherBox = new Element('div', { 'class' : 'AnotherBox' });
-		this.addOrAnotherBox = new Element('span', { 'class' : 'AndOr', 'text' : 'Or' });
-		this.addAndAnotherBox = new Element('span', { 'class' : 'AndOr', 'text' : 'And' });
+		this.conditionHeader    = new Element('span', { 'id' : 'ConditionHeader', 'text' : 'Conditions' });
 		
 		$(this.conditionHeaderDiv).inject($(this));
 		$(this.conditionHeader).inject($(this.conditionHeaderDiv));
-		//$(this.conditionHeaderHelp).inject($(this.conditionHeaderDiv));
 		
-		$(this.selection).inject($(this));		
-
-		$(this.anotherBox).inject($(this));
-		$(this.addOrAnotherBox).inject($(this.anotherBox));
-		$(this.addAndAnotherBox).inject($(this.anotherBox));		
+		this.firstSelection = new Selection(this);	
+		$(this.firstSelection).inject($(this));		
 	},
 	
-	attach: function()
+	/* Set the current Selection to AND 
+	 * @param Selection selection */ 
+	addAnd: function(selection)  
 	{
-		$(this.addOrAnotherBox).addEvents(
-		{
-			"mouseenter" : function()
+		selection.setStatus("and");
+		selection.actOnStatus();
+		this.actOnStatusChange(selection);
+	},
+	
+	/* Set the current Selection to OR 
+	 * @param Selection selection */
+	addOr: function(selection)
+	{
+		selection.setStatus("or");
+		selection.actOnStatus();
+		this.actOnStatusChange(selection);
+	},
+	
+	/* Set the current Selection to NONE 
+	 * @param Selection selection */
+	addNone: function(selection)
+	{
+		selection.setStatus("none");
+		selection.actOnStatus();
+		this.actOnStatusChange(selection);
+	},
+	
+	/* What happens when a condition changes its status */
+	actOnStatusChange: function() 
+	{
+		if (selection.getStatus() == "and" || selection.getStatus() == "or") {
+		
+			numOfConditions = this.conditions.length;
+			selectedIndex = this.conditions.indexOf(condition);
+			
+			if (selectedIndex + 1 == numOfConditions) 
 			{
-				$(this.addOrAnotherBox).setStyles(
-				{
-					"cursor" : "pointer",
-					"text-decoration" : "underline"
-				});
-			}.bind(this),
-			"mouseleave" : function()
-			{
-				$(this.addOrAnotherBox).setStyles(
-				{
-					"cursor" : "default",
-					"text-decoration" : "none"
-				});
-			}.bind(this),
-			"click" : function()
-			{
-				console.log("Add or.");
-			}
-		});
-		$(this.addAndAnotherBox).addEvents(
-		{
-			"mouseenter" : function()
-			{
-				$(this.addAndAnotherBox).setStyles(
-				{
-					"cursor" : "pointer",
-					"text-decoration" : "underline"
-				});
-			}.bind(this),
-			"mouseleave" : function()
-			{
-				$(this.addAndAnotherBox).setStyles(
-				{
-					"cursor" : "default",
-					"text-decoration" : "none"
-				});
-			}.bind(this),
-			"click" : function()
-			{
-				console.log("Add And.");
-			}
-		});
+				newCondition = new Condition(this);
+				this.conditions.push(newCondition);			
+				$(newCondition).inject($(this.basketDiv));
+			}			
+		}
+		else
+			console.log("Status is not ADD or OR");
+	},
 	},
 	
 	toElement: function() { return this.element; },
 });
 
+/* Selection */
 var Selection = new Class(
 {
 	initialize: function(parentCondition)
@@ -1088,7 +1080,7 @@ var Selection = new Class(
 	setupDomElements: function()
 	{
 		this.element = new Element('div', { 'class' : 'SelectDiv' });	
-		this.select = new Element('select', { 'class' : 'conditionSelect' });
+		this.select  = new Element('select', { 'class' : 'conditionSelect' });
 		this.optionsArray = new Array();
 		
 		this.optionsArray.push(new Element('option', { 'value' : 'No condition (choose all)', 'text' : 'No condition (choose all)' }));
@@ -1107,14 +1099,17 @@ var Selection = new Class(
 			$(option).inject($(this.select));
 		}.bind(this));
 		
+		this.andOrDiv = new Element('span', { 'class' : 'AndOrDiv' });
 		this.conditionInputBox = new Element('input', { 'class' : 'ConditionInput', 'type' : 'input', 'name' : 'ConditionInput' });
-		this.addOr = new Element('span', { 'class' : 'AndOr', 'text' : 'Or' });
+		this.addOr  = new Element('span', { 'class' : 'AndOr', 'text' : 'Or' });
 		this.addAnd = new Element('span', { 'class' : 'AndOr', 'text' : 'And' });
 		
 		$(this.select).inject($(this));
-		$(this.conditionInputBox).inject($(this));
-		$(this.addOr).inject($(this));
-		$(this.addAnd).inject($(this));				
+		$(this.conditionInputBox).inject($(this));		
+			
+		$(this.addOr).inject($(this.andOrDiv));
+		$(this.addAnd).inject($(this.andOrDiv));		
+		$(this.andOrDiv).inject($(this));
 	},
 	
 	attach: function() 
@@ -1139,8 +1134,8 @@ var Selection = new Class(
 			}.bind(this),
 			"click" : function()
 			{
-				console.log("Add or.");
-			}
+				this.parentCondition.addOr(this);
+			}.bind(this)
 		});
 		$(this.addAnd).addEvents(
 		{
@@ -1162,10 +1157,44 @@ var Selection = new Class(
 			}.bind(this),
 			"click" : function()
 			{
-				console.log("Add And.");
-			}
+				this.parentCondition.addAnd(this);
+			}.bind(this)
 		});
 	},
+	
+	/* @param String status How this selection is 
+	 * currently used. "and", "or", "none". */
+	setStatus: function(status) { this.status = status; },
+	getStatus: function() { return this.status; },
+	
+	actOnStatus: function() 
+	{	
+		if (this.status == "and") 
+		{
+			this.selectChoice(this.addAnd);
+			this.unselectChoice(this.addOr);
+		}
+		else if (this.status == "or") 
+		{
+			this.selectChoice(this.addOr);
+			this.unselectChoice(this.addAnd);		
+		}		
+		else if (this.status == "none")
+		{
+			this.unselectChoice(this.addOr);
+			this.unselectChoice(this.addAnd);
+		}
+		else
+			throw Error("No status.");
+	},
+	
+	/* Change the appearance.
+	 * @param String AndOrObject */
+	selectChoice: function(andOrObject) { $(andOrObject).setStyles({ "font-weight" : "bold" }); },
+	
+	/* Change the appearance.
+	 * @param String AndOrObject */
+	unselectChoice: function(andOrObject) { $(andOrObject).setStyles({ "font-weight" : "normal" }); },
 	
 	toElement: function() { return this.element; },
 });
@@ -1200,7 +1229,7 @@ var DataHandler = new Class(
 			},
 			onComplete: function(result) 
 			{
-				that.main.mainWindow.stopSpinner();
+					that.main.mainWindow.stopSpinner();
 				//console.log("System: Reading complete. Managing results..");		
 				//this.sendResultsToMain(result);
 				returnFunction(result);

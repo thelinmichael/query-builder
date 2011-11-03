@@ -287,7 +287,7 @@ input {
 	font-variant: small-caps;
 }
 .BasketConditionInput {
-	margin-left: 10px;
+	margin-left: 40px;
 }
 .BasketAdd {
 	margin-left: 20px;
@@ -581,4 +581,13 @@ input {
 }
 .AnotherBox {
 	margin-left: 25%;
+}
+.AndOrDiv {
+	float: right;
+	position: relative;
+	top: 5px;
+	right: 15px;
+}
+.AndOr {
+	margin-left: 7px;
 }
