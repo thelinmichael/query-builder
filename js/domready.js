@@ -867,12 +867,18 @@ var ColumnRow = new Class(
 		this.database = dataBreakdown[0];
 		this.table    = dataBreakdown[1];
 		this.column   = dataBreakdown[2];
-		this.basket   = this.parentMainWindow.main.basket.getBasket();
+		this.basket   = this.parentMainWindow.main.basket;
 		this.dbObject = new DbObject(this.database, this.table, this.column);		
 
-		this.isInBasket = this.basket.isInBasket(this.dbObject);
-		if (this.isInBasket)
-			this.basketObject = this.basket.getBasketObject(this.dbObject);
+		this.isInBasket = this.basket.getBasket().isInBasket(this.dbObject);
+		if (this.isInBasket) 
+		{
+			this.basketObject = this.basket.getBasket().getBasketObject(this.dbObject);
+			this.dbObject = this.basketObject.getDbObject();
+			console.log(this.dbObject);
+		}
+		else
+			this.basketObject = null;
 			
 		this.setupDomElements();
 		this.attach();
@@ -970,7 +976,7 @@ var ColumnRow = new Class(
 			}.bind(this),
 			'click': function()
 			{	
-				this.parentMainWindow.main.basket.removeItem(this.data);
+				this.basket.removeItem(this.dbObject);
 				this.updateView();
 			}.bind(this)
 		});
@@ -994,43 +1000,37 @@ var ColumnRow = new Class(
 		});
 	},
 	
-	/* Show cancel button or not */
-	showCancelButton: function() 
-	{
-		if (this.changesAreMade())
-			$(this.cancelButton).setStyle("display", "inline");
-		else
-			$(this.cancelButton).setStyle("display", "none");
-	},			
-	
 	/* Updates the add and remove buttons, and updates the view */
 	updateView: function()
-	{
+	{	
 		/* Check if this part is already in the basket. */
-		this.isInBasket = this.basket.isInBasket(this.dbObject);
+		this.isInBasket = this.basket.getBasket().isInBasket(this.dbObject);
 		/* Put remove-button if already in the basket */
 		if (this.isInBasket)
 		{
 			$(this.saveButton).setStyle("display", "none");
 			$(this.removeButton).setStyle("display", "inline");
-			
+			$(this.cancelButton).setStyle("display", "none");
 			/* Get the current conditions for this object */
-			this.conditionDiv.removeSelections();
+			this.conditionsDiv.removeSelections();
 			Array.each(this.basketObject.getConditions(), function(existingCondition)
 			{
 				var existingSelections = existingCondition.toSelections();
 				
 				/* Insert existing conditions */
 				Array.each(existingSelections, function(existingSelection)
-				{
-					existingSelection.setParent(this.conditionsDiv);
+				{				
+					existingSelection.setParent(this.conditionsDiv);			
 					this.conditionsDiv.addSelection(existingSelection);
-				}.bind(this));
+				}.bind(this));		
 			}.bind(this));	
 		}
 		/* Put add-button if not in the basket */
 		else
 		{
+			this.conditionsDiv.removeSelections();
+			//this.conditionsDiv.newSelection();
+			$(this.cancelButton).setStyle("display", "none");
 			$(this.removeButton).setStyle("display", "none");
 			$(this.saveButton).setStyle("display", "inline");
 		}
@@ -1041,21 +1041,54 @@ var ColumnRow = new Class(
 	 */
 	cancelChanges: function()
 	{
+		this.updateView();
+		this.conditionChanged();
+	},
 	
+	conditionChanged: function()
+	{
+		if (this.changesAreMade())
+		{
+			console.log("Changes made.");
+			$(this.cancelButton).setStyle("display", "inline");	
+			$(this.saveButton).setStyle("display", "inline");
+		}
+		else
+		{
+			console.log("No changes made.");
+			$(this.saveButton).setStyle("display", "none");
+			$(this.cancelButton).setStyle("display", "none");
+		}	
 	},
 	
 	/* Returns true if there are differences between the basket and what is edited in the column row.
-	 * Otherwise false. Can be used to view or hide the cancelbutton. */
+	 * Otherwise false. Can be used to view or hide the cancelbutton. 
+	 * If the object is not in the basket, the function will return true. */
 	changesAreMade: function() 
-	{		
+	{	
+		if (!this.basket.getBasket().isInBasket(this.dbObject))
+			return true;
+			
 		var editedConditions = this.getEditedConditions();
 		var match;
 		var noMatchFound = false;
+		console.log("Number of conditions: " + editedConditions.length);
 		Array.each(editedConditions, function(editedCondition)
 		{
 			match = Array.some(this.basketObject.getConditions(), function(existingCondition)
 				    { 
 						return (existingCondition.compareTo(editedCondition));
+					}.bind(this));
+			if (!match)
+				noMatchFound = true;
+		}.bind(this));
+		
+		/* Checking if existing conditions in the basket have been removed */
+		Array.each(this.basketObject.getConditions(), function(basketCondition)
+		{
+			match = Array.some(editedConditions, function(editedCondition)
+				    { 
+						return (basketCondition.compareTo(editedCondition));
 					}.bind(this));
 			if (!match)
 				noMatchFound = true;
@@ -1087,7 +1120,11 @@ var ColumnRow = new Class(
 			tempBasketObjectConditions = selection.toBasketObjectCondition(); 
 			Array.each(tempBasketObjectConditions, function(tempBasketObjectCondition)
 			{
-				basketObjectConditions.push(tempBasketObjectCondition); 
+				if (tempBasketObjectCondition.getConstraintValue().clean() == "") {}
+					//console.log("Empty");
+				else {
+					basketObjectConditions.push(tempBasketObjectCondition); 
+				}
 			});
 		});
 		return basketObjectConditions;
@@ -1096,9 +1133,9 @@ var ColumnRow = new Class(
 	addItem: function() 
 	{
 		/* Check if in the basket */
-		if (!this.basket.isInBasket(this.dbObject))
+		if (!this.basket.getBasket().isInBasket(this.dbObject))
 			this.basket.addItem(this.dbObject);	
-		this.basketObject = this.basket.getBasketObject(this.dbObject);
+		this.basketObject = this.basket.getBasket().getBasketObject(this.dbObject);
 	
 		/* Remove existing conditions */
 		this.basketObject.removeConditions();
@@ -1113,13 +1150,14 @@ var ColumnRow = new Class(
 		}.bind(this));
 		
 		/* Debugging -- Check if this object is in the basket, and what conditions are in it */
-		testBasketObject = this.basket.getBasketObject(this.dbObject);
-		var testConditions = testBasketObject.getConditions();
-		Array.each(testConditions, function(testCondition) 
-		{
-			console.log(testCondition);
-		});
+		//testBasketObject = this.basket.getBasketObject(this.dbObject);
+		//var testConditions = testBasketObject.getConditions();
+		//Array.each(testConditions, function(testCondition) 
+		//{
+		//	console.log(testCondition);
+		//});
 		
+		this.basket.updateView(); /* Update view again to update the basketobject with its conditions */
 		$(this.conditionsDiv).highlight();
 	},
 });
@@ -1143,11 +1181,13 @@ var Condition = new Class(
 		
 		$(this.conditionHeaderDiv).inject($(this));
 		$(this.conditionHeader).inject($(this.conditionHeaderDiv));
-		
-		this.firstSelection = new Selection();
-		this.firstSelection.setParent(this);
-		$(this.firstSelection).inject($(this));		
-		this.selections.push(this.firstSelection);
+
+		this.addSelectionButton = new AddSelectionButton(this);
+		$(this.addSelectionButton).inject($(this.conditionHeader));
+		//this.firstSelection = new Selection();
+		//this.firstSelection.setParent(this);
+		//$(this.firstSelection).inject($(this));		
+		//this.selections.push(this.firstSelection);
 	},
 	
 	/* Add a new selection to the row of selections */
@@ -1159,9 +1199,17 @@ var Condition = new Class(
 		$(selectionObj).inject($(this));
 	},
 	
+	addSelection: function(selection)
+	{
+		this.selections.push(selection);
+		$(selection).inject($(this));
+	},
+	
 	/* Remove an existing selection */
 	removeSelection: function(selection)
 	{	
+		if (!this.selections.contains(selection))
+			throw new Error("Did not find selection.");
 		$(selection).destroy();
 		this.selections.erase(selection);
 	},
@@ -1173,6 +1221,11 @@ var Condition = new Class(
 		{
 			this.removeSelection(selection);
 		}.bind(this));
+	},
+	
+	conditionChanged: function()
+	{
+		this.parentRow.conditionChanged();
 	},
 		
 	toElement: function() { return this.element; },
@@ -1187,6 +1240,7 @@ var Selection = new Class(
 	initialize: function()
 	{
 		this.setupDomElements();
+		this.attach();
 	},
 		
 	setupDomElements: function()
@@ -1206,16 +1260,52 @@ var Selection = new Class(
 		this.conditionInputBox = new Element('input', { 'class' : 'ConditionInput', 'type' : 'input', 'name' : 'ConditionInput' });
 		$(this.select).inject($(this));
 		$(this.conditionInputBox).inject($(this));		
+		
+		this.removeSelectionButton = new Element('span', { 'class' : 'RemoveSelectionButton', 'text' : '-' });
+		$(this.removeSelectionButton).inject($(this));
 	},
 	
-	setOption: function(optionText)
+	attach: function()
 	{
-		/* Change the option to the corresponding optiontext. Used by BasketObjectCondition */
+		$(this.removeSelectionButton).addEvents(
+		{
+			'click': function()
+			{
+				this.getParent().removeSelection(this);
+				this.getParent().conditionChanged();
+			}.bind(this),
+			'mouseenter': function()
+			{
+				$(this.removeSelectionButton).setStyle('cursor', 'pointer');
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this.removeSelectionButton).setStyle('cursor', 'default');
+			}.bind(this),
+		});
+		$(this.select).addEvents(
+		{
+			'change' : function() { this.getParent().conditionChanged(); }.bind(this),
+		});
+		$(this.conditionInputBox).addEvents(
+		{
+			'keyup' : function() { this.getParent().conditionChanged(); }.bind(this),
+		});
+	},
+	
+	setOption: function(option)
+	{	
+		/* Set the value. Used by BasketObjectCondition*/	
+		if (option.isMoreThan)
+			$(this.select).set("value", $(this.optionsArray[0]).get("value"));
+		else
+			$(this.select).set("value", $(this.optionsArray[1]).get("value"));
 	},
 	
 	setValue: function(value) 
 	{
-		/* Set the value. Used by BasketObjectCondition*/
+		/* Set the value. Used by BasketObjectCondition*/		
+		this.conditionInputBox.set("value", value)
 	},
 	
 	/* Convert this selection to a BasketObjectCondition 
@@ -1237,9 +1327,9 @@ var Selection = new Class(
 		if (type == "number")
 		{
 			if (optionValue == "> (more than)")
-				basketObjectConditions.push(new ConditionNumber(this.conditionInputBox.get("value"), true));
+				basketObjectConditions.push(new ConditionNumber(this.conditionInputBox.get("value"), { "isMoreThan" : true } ));
 			else if (optionValue == "< (less than)")
-				basketObjectConditions.push(new ConditionNumber(this.conditionInputBox.get("value"), false));
+				basketObjectConditions.push(new ConditionNumber(this.conditionInputBox.get("value"), { "isMoreThan" : false }  ));
 			else 
 				throw new Error("No option matching.");		
 		}
@@ -1250,6 +1340,7 @@ var Selection = new Class(
 		return basketObjectConditions;
 	},
 	
+	getParent: function() { return this.parentCondition; },
 	setParent: function(parentCondition) { this.parentCondition = parentCondition; },	
 	
 	toElement: function() { return this.element; },
@@ -1263,6 +1354,7 @@ var BasketOption = new Class(
 		this.text = text;
 		
 		this.setupDomElement();
+		this.attach();
 	},
 	
 	setupDomElement: function()
@@ -1270,9 +1362,57 @@ var BasketOption = new Class(
 		this.element = new Element('option', { 'value' : this.text, 'text' : this.text })
 	},
 	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			'change' : function() { console.log("test"); },
+		});
+	},
+	
+	getText: function() { return this.text; },
 	toElement: function() { return this.element; },
 });
+
+var AddSelectionButton = new Class(
+{
+	initialize: function(parentCondition) 
+	{
+		this.parentCondition = parentCondition;
+		
+		this.setupDomElements();
+		this.attach();
+	},
 	
+	setupDomElements: function() 
+	{
+		this.element = new Element('span', { 'text' : 'Add new condition', 'class' : 'AddConditionButton' });
+	},
+	
+	attach: function()
+	{
+		$(this).addEvents(
+		{
+			'click': function()
+			{
+				this.parentCondition.newSelection();
+			}.bind(this),
+			'mouseenter': function()
+			{
+				$(this).setStyle('cursor', 'pointer');
+				$(this).setStyle('text-decoration', 'underline');
+			}.bind(this),
+			'mouseleave': function()
+			{
+				$(this).setStyle('cursor', 'default');
+				$(this).setStyle('text-decoration', 'none');
+			}.bind(this),
+		});
+	},
+	
+	toElement: function() { return this.element; },
+});
+
 /* Reads data from the MySQL server, and posts changes to the rest of the application */ 
 var DataHandler = new Class(
 {
@@ -1926,39 +2066,56 @@ var Basket = new Class(
 		basketHeader.addBasketView(new BasketSubmitView(basketHeader, "M2.379,14.729 5.208,11.899 12.958,19.648 25.877,6.733 28.707,9.561 12.958,25.308z", 'Configure and submit'), 'submit');
 		
 		basketHeader.attach();
-		basketHeader.selectView(basketHeader.views[0]);
+		basketHeader.selectView(basketHeader.views[2]);
 	},
 	
 	setView: function(view)
 	{
+		/* Check if there's a view activated
+		 * If there's a view activated, hide it. */
 		if (this.currentView != null) {
-			this.currentView.hideView(); // turning off the current view.
-		}
-		if (this.shownViews.contains(view))
+			this.currentView.hideView(); 
+		}		
+		
+		/* Check if this is a view that already exists in the already added views
+		 * If it is already added, simply refresh its contents and show it. 
+		 * If it is not already added, add it and show it. */
+		if (!this.shownViews.contains(view))
 		{
-			view.refresh();			
-			$(this.currentView.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
+			this.shownViews.push(view);
+			Array.each($(this.basketBody).getChildren(), function(child)
+			{
+				child.destroy();
+			});
+			$(view.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
 			view.showView(); // making the view visible.
 		}
 		else
 		{
-			$(view.getBasketBodyType()).inject($(this.basketBody)); // creating the view.
-			this.shownViews.push(view);
+			Array.each($(this.basketBody).getChildren(), function(child)
+			{
+				child.destroy();
+			});
+			$(view.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
+			view.showView();			
 		}
 		this.currentView = view; // setting the new view as current view
 	},
 	
-	// Ineffeciency is high.
+	/* Destroy all the objects in the view, and restore the view */
 	updateView: function()
 	{
-		this.basketBody.getChildren().destroy(); // clearing
-		$(this.currentView.getBasketBodyType()).inject($(this.basketBody)); // setting the new view.
+		Array.each($(this.basketBody).getChildren(), function(child)
+		{
+			child.destroy();
+		});		
+		$(this.currentView.getBasketBodyType()).inject($(this.basketBody)); // setting the updated contents
 	},
 	
 	/* Man in the middle functions */
 	isInBasket: function(item) { return this.currentBasket.isInBasket(item); },
-	addItem: function(item) { return this.currentBasket.addItem(item); },
-	removeItem: function(item) { return this.currentBasket.removeItem(item); },
+	addItem: function(item) { this.currentBasket.addItem(item); this.updateView();  },
+	removeItem: function(item) { this.currentBasket.removeItem(item); this.updateView(); },
 	
 	getBasket: function() { return this.currentBasket; }, 
 	
@@ -2108,6 +2265,7 @@ var BasketView = new Class(
 	
 	refresh: function() 
 	{
+		console.log("refreshing. will destroy all elements.");
 		this.destroyAll(); 
 	},
 	
@@ -2121,37 +2279,32 @@ var BasketView = new Class(
 	
 	getBasketStruct: function() { return this.parentBasketHeader.parentBasket.getBasket(); },
 	
+	toString: function() { return this.name; },
+	
 	toElement: function() { return this.element; },
 });
 
-/* DOM Basket view */
+/* DOM Basket view -- NOT SUPPORTED. */
 var BasketTreeView = new Class(
 {
 	Extends: BasketView,
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
+		this.name = "BasketTree";
+	},	
+	setupBasketBodyType: function()
+	{
+		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
+		this.notSupportedDiv = new Element('div', { 'class' : 'ViewNotSupported' , 'text' : 'This view is meant to show the chosen database objects shown as a tree. Not supported in this version.' });
+		
+		$(this.notSupportedDiv).inject($(this.basketBodyType));
+		
+		return this.basketBodyType;
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
 	
-	setupBasketBodyType: function()
-	{
-		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
-		var insertText = "";
-		var dbObject = null;
-		Array.each(this.getBasketStruct().getBasketObjects(), function(basketObject)
-		{
-			dbObject = basketObject.getDbObject();
-			$(test).inject($(this.basketBodyType));
-			console.log($(test).get("text"));
-			insertText = new Element('span', { 'text' : "SELECT "  + dbObject.getColumnName() + " FROM " + dbObject.getDatabaseName() + "." + dbObject.getTableName() + "\n" });
-			$(insertText).inject($(this.basketBodyType));
-			console.log($(insertText).get("text"));
-			console.log(this.basketBodyType);
-		}.bind(this));	
-		return this.basketBodyType;
-	},	
 });
 
 /* Shows what connections (i.e. foreign key relationships) are in the basket 
@@ -2162,6 +2315,7 @@ var BasketConnectionView = new Class(
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
+		this.name = "BasketConnectionView";
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
@@ -2184,6 +2338,7 @@ var BasketPseudoView = new Class(
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
+		this.name = "BasketPseudoView";
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
@@ -2191,9 +2346,34 @@ var BasketPseudoView = new Class(
 	setupBasketBodyType: function()
 	{
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
-		this.notSupportedDiv = new Element('div', { 'class' : 'ViewNotSupported' , 'text' : 'This view is meant to show the chosen database objects listed in pseudo SQL. Not supported in this version.' });
+		var insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' : "" });
+		var dbObject = null;
+		Array.each(this.getBasketStruct().getBasketObjects(), function(basketObject)
+		{		
+			dbObject = basketObject.getDbObject();
+			
+			text = "SELECT "  + dbObject.getColumnName() + " FROM " + dbObject.getDatabaseName() + "." + dbObject.getTableName();
+			insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  text });
+			$(insertText).inject($(this.basketBodyType));	
+			
+			var i = 0;
+			Array.each(basketObject.getConditions(), function(condition)
+			{
+				text = "";
+				
+				changeRow = new Element('br');
+				$(changeRow).inject($(this.basketBodyType));
+			
+				if (i++ == 0)
+					text = text + "WHERE ";
+				else 
+					text = text + "AND ";
 		
-		$(this.notSupportedDiv).inject($(this.basketBodyType));
+				text = text + dbObject.getColumnName() + " " + condition.getConditionString() + " " + condition.getConstraintValue();
+				conditionElement = new Element('span', { 'class' : 'PseudoStatement', 'text' :  text });			
+				$(conditionElement).inject($(this.basketBodyType));				
+			}.bind(this));					
+		}.bind(this));
 		
 		return this.basketBodyType;
 	},
@@ -2206,6 +2386,7 @@ var BasketSqlView = new Class(
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
+		this.name = "BasketSqlView";
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
@@ -2254,6 +2435,7 @@ var BasketSubmitView = new Class(
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
+		this.name = "BasketSubmitView";
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
@@ -2589,11 +2771,16 @@ var BasketStructure = new Class(
 	 */
 	removeItem: function(dbObject)
 	{
+		var foundItem = false;
 		Array.each(this.basketObjects, function(basketObject)
 		{
-			if (basketObject.getDbObject().compareTo(dbObject))
+			if (basketObject.getDbObject().compareTo(dbObject)) {
 				this.basketObjects.erase(basketObject);
-		});
+				foundItem = true;
+			}
+		}.bind(this));
+		if (!foundItem)
+			throw new Error("Warning, did not found item that was supposed to be removed!");
 	},
 	
 	/* Remove all basket objects. */
@@ -2609,10 +2796,12 @@ var BasketStructure = new Class(
 	 * Return true if so, return false if not. */
 	isInBasket: function(dbObject)
 	{
-		Array.some(this.basketObjects, function(basketObject) 
-		{
-			return basketObject.getDbObject().compareTo(dbObject)
-		});
+		returnBool = Array.some(this.basketObjects, function(basketObject) 
+					{
+						return basketObject.getDbObject().compareTo(dbObject)
+					});
+		return returnBool;
+		
 	},
 	
 	/* Get the basketobject which includes a specific dbObject */
@@ -2641,7 +2830,7 @@ var BasketObject = new Class(
 	setDbObject: function(dbObject) { this.dbObject = dbObject; },
 
 	addCondition: function(basketObjectCondition) {	this.conditions.push(basketObjectCondition); },	
-	removeConditions: function() { this.conditions.erase(); },
+	removeConditions: function() { this.conditions.empty(); },
 	
 	getConditions: function() { return this.conditions; },
 });
@@ -2660,17 +2849,11 @@ var BasketObjectCondition = new Class(
 	{
 		var selectionArray = new Array();
 		
-		if (this.getType() == "all") {
+		if (this.getType() == "number") {
 			var newSelection = new Selection();
-			//newSelection.setValue(
-			//newSelection.setOption(..
-			selectionArray.push(new Selection());
-		}
-		else if (this.getType() == "number") {
-			var newSelection = new Selection();
-			//newSelection.setValue(
-			//newSelection.setOption(..
-			selectionArray.push(new Selection());
+			newSelection.setValue(this.constraintValue);
+			newSelection.setOption(this.options);
+			selectionArray.push(newSelection);
 		}
 		return selectionArray;	
 	},
@@ -2723,6 +2906,18 @@ var ConditionNumber = new Class(
 		this.parent(constraintValue, options);
 	},
 	
+	compareTo: function(otherCondition)
+	{
+		if (this.options.isMoreThan == otherCondition.options.isMoreThan &&
+		    this.getConditionString().clean() == otherCondition.getConditionString().clean() &&
+			this.getConstraintValue().clean() == otherCondition.getConstraintValue().clean())
+			return true;
+		else
+			return false;
+	},
+	
+	getConditionString: function() { if (this.options.isMoreThan) return ">"; else return "<"; },
+	
 	setIsMoreThan: function(isMoreThan) { this.options.isMoreThan = isMoreThan; },
 	getIsMoreThan: function() { return this.options.isMoreThan; },
 });
@@ -2751,11 +2946,11 @@ var DbObject = new Class(
 	
 	compareTo: function(otherDbObject) 
 	{
-		if (this.getDatabaseName() == otherDbObject.getDatabaseName() ||
-			this.getTableName()    == otherDbObject.getTableName()    ||
-			this.getColumnName()   == otherDbObject.getColumnName())
+		if (this.getDatabaseName().clean() == otherDbObject.getDatabaseName().clean() ||
+			this.getTableName().clean()    == otherDbObject.getTableName().clean()    ||
+			this.getColumnName().clean()   == otherDbObject.getColumnName().clean())
 			return true;
-		else
+		else 
 			return false;
 	},
 	
