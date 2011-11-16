@@ -144,7 +144,7 @@
 		}
 		else
 			die("Could not read type.");
-	
+		
      	/* Prepare and execute the database query */	
 		$stmt = $dbh->prepare($queryString);
 		if ($stmt->execute(array($search . '%') ) )

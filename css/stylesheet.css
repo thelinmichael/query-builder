@@ -599,6 +599,12 @@ input {
 	color: #666666;
 	display: block;
 }
+.pseudoStatic {
+	font-family: Helvetica;
+	font-size: 11px;
+	color: #666666;
+	display: inline;
+}
 .AddConditionButton {
 	font-family: Helvetica;
 	font-size: 9px;
@@ -615,3 +621,12 @@ input {
 	border-color: #AAA;
 	padding: 2px 5px 2px 5px;
 }	
+.inBasket {
+	background-color: #DDD;
+}
+.Confirm {
+	margin-left: 10px;
+	font-family: Helvetica;
+	font-size: 11px;
+	color: #666666;
+}

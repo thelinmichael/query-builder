@@ -1,11 +1,12 @@
 Still to go:
 
-[ ] Simple query building choices. 
-[ ] Basket handling.
-[ ] Pseudo SQL view based on what is in basket.
-[ ] Connection view based on what is in basket.
-[ ] Tree view based on what is in basket.
-[ ] Send (UI)
-[ ] Send (Outgoing format)
-[ ] Send (E-mail functionality)
+[X] Simple query building choices. 
+[X] Basket handling.
+[X] Connection view based on what is in basket.
+[X] Tree view based on what is in basket.
+[X] Pseudo SQL view based on what is in basket.
+[X] Database result listings
+[X] Send (UI)
+[X] Send (Outgoing format)
+[X] Send (E-mail functionality)
 

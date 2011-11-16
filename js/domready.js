@@ -126,6 +126,27 @@ var Main = new Class(
 		try 
 		{
 			data = { "type" : type, "database" : this.getDatabaseValues(), "table" : this.getTableValues(), "column" : this.getColumnValues()};
+			
+			/* Tables might contain already added databases. And Columns might contain already added tables, and databases. 
+			 * These must be added to data 
+			 */
+			 
+			/* 1. Table values */
+			Array.each(this.tableCollection.getValues(), function(table)
+			{
+				if (table.getDatabaseName() != null && !data.database.contains(table.getDatabaseName()))
+					data.database.push(table.getDatabaseName());
+			});
+			
+			/* 2. Column values (databases, tables) */
+			Array.each(this.columnCollection.getValues(), function(column)
+			{
+				if (column.getDatabaseName() != null && !data.database.contains(column.getDatabaseName()))
+					data.database.push(column.getDatabaseName());
+				if (column.getTableName() != null && !data.table.contains(column.getTableName()))
+					data.table.push(column.getDatabaseName());
+			});
+			
 			if (notContainer)
 				data.notcontainer = 1;
 			else 
@@ -133,7 +154,7 @@ var Main = new Class(
 				
 			this.mainWindow.setType(type);										 // Let the main window know which type.
 			this.dataHandler.readData(data, this.setQueryResult.bind(this));     // Send data and set the call back function 
-		}
+		}	
 		catch(e) { throw new Error("Could not fetch data: " + e.message); }
 	},
 	
@@ -368,6 +389,22 @@ var MainWindow = new Class(
 	 */
 	updateFilterInfo: function(num) { this.filterInfo.set("text", "(" + num + " after filtering)"); },
 	
+	/* Adds all checked items to basket 
+	 * @param add If the item should be added or removed. */	
+	toBasketChecked: function(add) 
+	{
+		Array.each(this.rows, function(row)
+		{
+			if (row.isChecked())
+			{
+				if (add)  /* TODO: Add to basket */				
+					row.addItem();
+				else
+					row.removeItem();
+			}	
+		});
+	},
+	
 	toElement: function() { return this.element; },
 	
 	/* Get and set methods */
@@ -458,6 +495,7 @@ var SelectAction = new Class(
 		{
 			this.addPerformOption(new AddToSelected(this));
 			this.addPerformOption(new RemoveFromSelected(this));
+			
 			this.addPerformOption(new AddToBasket(this));
 			this.addPerformOption(new RemoveFromBasket(this));
 		}
@@ -958,7 +996,6 @@ var ColumnRow = new Class(
 			'click': function()
 			{	
 				this.addItem();
-				this.updateView();
 			}.bind(this)
 		});
 		/* Removebutton actions */
@@ -976,8 +1013,7 @@ var ColumnRow = new Class(
 			}.bind(this),
 			'click': function()
 			{	
-				this.basket.removeItem(this.dbObject);
-				this.updateView();
+				this.removeItem();
 			}.bind(this)
 		});
 		/* Cancelbutton actions */
@@ -1005,14 +1041,20 @@ var ColumnRow = new Class(
 	{	
 		/* Check if this part is already in the basket. */
 		this.isInBasket = this.basket.getBasket().isInBasket(this.dbObject);
+		//console.log("Object " + this.dbObject.getColumnName() + " is in basket? " + this.isInBasket);
 		/* Put remove-button if already in the basket */
+		
+		this.conditionsDiv.removeSelections();
+		
 		if (this.isInBasket)
 		{
-			$(this.saveButton).setStyle("display", "none");
+			/* Change background */
+			$(this).addClass('inBasket');
+			
+			$(this.saveButton).setStyle("display", "inline");
 			$(this.removeButton).setStyle("display", "inline");
 			$(this.cancelButton).setStyle("display", "none");
 			/* Get the current conditions for this object */
-			this.conditionsDiv.removeSelections();
 			Array.each(this.basketObject.getConditions(), function(existingCondition)
 			{
 				var existingSelections = existingCondition.toSelections();
@@ -1028,7 +1070,8 @@ var ColumnRow = new Class(
 		/* Put add-button if not in the basket */
 		else
 		{
-			this.conditionsDiv.removeSelections();
+			$(this).removeClass('inBasket');
+			
 			//this.conditionsDiv.newSelection();
 			$(this.cancelButton).setStyle("display", "none");
 			$(this.removeButton).setStyle("display", "none");
@@ -1049,8 +1092,8 @@ var ColumnRow = new Class(
 	{
 		if (this.changesAreMade())
 		{
-			console.log("Changes made.");
-			$(this.cancelButton).setStyle("display", "inline");	
+			//console.log("Changes made.");
+			//$(this.cancelButton).setStyle("display", "inline");	
 			$(this.saveButton).setStyle("display", "inline");
 		}
 		else
@@ -1158,6 +1201,15 @@ var ColumnRow = new Class(
 		//});
 		
 		this.basket.updateView(); /* Update view again to update the basketobject with its conditions */
+		this.updateView();
+		$(this.conditionsDiv).highlight();
+	},
+	
+	removeItem: function() 
+	{
+		this.basket.removeItem(this.dbObject);
+		this.basket.updateView(); /* Update view again to update the basketobject with its conditions */
+		this.updateView();
 		$(this.conditionsDiv).highlight();
 	},
 });
@@ -1196,7 +1248,7 @@ var Condition = new Class(
 		var selectionObj = new Selection();
 		selectionObj.setParent(this);
 		this.selections.push(selectionObj);
-		$(selectionObj).inject($(this));
+		$(selectionObj).inject($(this));	
 	},
 	
 	addSelection: function(selection)
@@ -1211,21 +1263,19 @@ var Condition = new Class(
 		if (!this.selections.contains(selection))
 			throw new Error("Did not find selection.");
 		$(selection).destroy();
-		this.selections.erase(selection);
+		erased = this.selections.erase(selection);	
 	},
 	
 	/* Remove all selections */
 	removeSelections: function() 
 	{ 
-		Array.each(this.selections, function(selection) 
-		{
-			this.removeSelection(selection);
-		}.bind(this));
+		while (this.selections.length > 0)
+			this.removeSelection(this.selections[0]);		
 	},
 	
 	conditionChanged: function()
 	{
-		this.parentRow.conditionChanged();
+		//this.parentRow.conditionChanged();
 	},
 		
 	toElement: function() { return this.element; },
@@ -1646,7 +1696,7 @@ var DatabaseElementContainer = new Class(
 	{
 		var alreadyExists = Array.some(this.databaseElements, function(existingElement)
 		{	
-			return (databaseElement.name == existingElement.name)
+			return (existingElement.compareTo(databaseElement)); 
 		});
 		if (alreadyExists)
 			return false;
@@ -1828,23 +1878,31 @@ var DatabaseElement = new Class(
 		this.setOptions(options);
 		this.parentDatabaseElementContainer = parentDatabaseElementContainer;
 		this.name = name;
-		
+		this.databaseName = null;
+		this.tableName    = null;
+		this.columnName   = null;
 		var dataBreakdown = this.name.split('.');
 		if (dataBreakdown.length == 1)
 		{
 			this.type  = "database";
-			this.name  = dataBreakdown[0];
+			this.databaseName = dataBreakdown[0];
+			this.name = dataBreakdown[0];
 			this.title = "Database: " + dataBreakdown[0];
 		}
 		else if (dataBreakdown.length == 2)
 		{
 			this.type  = "table";
+			this.databaseName = dataBreakdown[0];
+			this.tableName = dataBreakdown[1];
 			this.name  = dataBreakdown[1];
 			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1];
 		}
 		else if (dataBreakdown.length == 3)
 		{
 			this.type  = "column";
+			this.databaseName = dataBreakdown[0];
+			this.tableName = dataBreakdown[1];
+			this.columnName = dataBreakdown[2];
 			this.name  = dataBreakdown[2];
 			this.title = "Database: " + dataBreakdown[0] + " Table: " + dataBreakdown[1] + " Column: " + dataBreakdown[2];
 		}
@@ -1896,6 +1954,17 @@ var DatabaseElement = new Class(
 		});
 		return this;
 	},
+	
+	compareTo: function(otherElement)
+	{
+		return (this.databaseName == otherElement.getDatabaseName() &&
+				this.tableName    == otherElement.getTableName()    &&
+				this.columnName   == otherelement.getColumnName());
+	},
+	
+	getDatabaseName: function() { return this.databaseName; },
+	getTableName: function() { return this.tableName; },
+	getColumnName: function() { return this.columnName; },
 		
 	toElement: function() { return this.element },
 	setElement: function(element) { this.element = element; },
@@ -2116,6 +2185,8 @@ var Basket = new Class(
 	isInBasket: function(item) { return this.currentBasket.isInBasket(item); },
 	addItem: function(item) { this.currentBasket.addItem(item); this.updateView();  },
 	removeItem: function(item) { this.currentBasket.removeItem(item); this.updateView(); },
+	
+	getPseudoText: function() { return this.currentBasket.getPseudo(); },
 	
 	getBasket: function() { return this.currentBasket; }, 
 	
@@ -2338,7 +2409,7 @@ var BasketPseudoView = new Class(
 	initialize: function(parentBasketHeader, icon, title)
 	{
 		this.parent(parentBasketHeader, icon, title);
-		this.name = "BasketPseudoView";
+		this.name = "BasketPseudoView";		
 	},
 	
 	getBasketBodyType: function() { return this.setupBasketBodyType(); },
@@ -2348,34 +2419,126 @@ var BasketPseudoView = new Class(
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
 		var insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' : "" });
 		var dbObject = null;
+		
+		this.usedAliases = new Array();
+		this.aliases = new Hash();
+		this.text = new Array();
+		this.text[0] = "";
+		this.text[1] = "";
+		this.text[2] = "";
+		this.databaseNum = 1;		
+		i = 1;
+		Array.each(this.getBasketStruct().getBasketObjects(), function(basketObject)
+		{		
+			if (i == 1)
+			{
+				selectDOM = new Element('span', { 'class' : 'pseudoStatic', 'text' : 'SELECT ' });
+				$(selectDOM).inject($(this.basketBodyType));
+			}
+			dbObject = basketObject.getDbObject();
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
+			this.text[0] = this.text[0] + dbAlias + "." + tableAlias + "." + dbObject.getColumnName();
+			if (i < this.getBasketStruct().getBasketObjects().length)
+				this.text[0] = this.text[0] + ", ";
+			i++;		
+		}.bind(this));		
+		insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  this.text[0] });
+		$(insertText).inject($(this.basketBodyType));
+		
+		i = 1;
+		Array.each(this.getBasketStruct().getBasketObjects(), function(basketObject)
+		{
+			if (i == 1)
+			{
+				fromDOM = new Element('span', { 'class' : 'pseudoStatic', 'text' : 'FROM ' });
+				$(fromDOM).inject($(this.basketBodyType));	
+			}
+			dbObject = basketObject.getDbObject();
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
+			
+			aliasAlreadyUsed = Array.some(this.usedAliases, function(usedAlias)
+			{
+				return (usedAlias.database == dbAlias && usedAlias.table == tableAlias);
+			}.bind(this));
+			
+			if (!aliasAlreadyUsed)
+			{
+				if (i != 1)
+					this.text[1] = this.text[1] + ", ";	
+				this.usedAliases.push({"database" : dbAlias, "table" : tableAlias});	
+				this.text[1] = this.text[1] + dbObject.getDatabaseName() + "." + dbObject.getTableName() + " AS " + dbAlias + "." + tableAlias;			
+			}			
+			i++;
+		}.bind(this));
+		insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  this.text[1] });
+		$(insertText).inject($(this.basketBodyType));		
+		i = 1;
+		whereSet = false;
 		Array.each(this.getBasketStruct().getBasketObjects(), function(basketObject)
 		{		
 			dbObject = basketObject.getDbObject();
-			
-			text = "SELECT "  + dbObject.getColumnName() + " FROM " + dbObject.getDatabaseName() + "." + dbObject.getTableName();
-			insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  text });
-			$(insertText).inject($(this.basketBodyType));	
-			
-			var i = 0;
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
 			Array.each(basketObject.getConditions(), function(condition)
 			{
-				text = "";
-				
-				changeRow = new Element('br');
-				$(changeRow).inject($(this.basketBodyType));
+				if (!whereSet)
+				{
+					whereSet = true;
+					k = i;
+					whereDOM = new Element('span', { 'class' : 'pseudoStatic', 'text' : 'WHERE ' });
+					$(whereDOM).inject($(this.basketBodyType));
+					this.text[2] = dbAlias + "." + tableAlias + "." + dbObject.getColumnName() + " " + condition.getConditionString() + " " + condition.getConstraintValue();						
+				}
+				else
+				{	
+					this.text[2] = this.text[2] + " AND";
+					insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  this.text[2] });
+					$(insertText).inject($(this.basketBodyType));				
 			
-				if (i++ == 0)
-					text = text + "WHERE ";
-				else 
-					text = text + "AND ";
-		
-				text = text + dbObject.getColumnName() + " " + condition.getConditionString() + " " + condition.getConstraintValue();
-				conditionElement = new Element('span', { 'class' : 'PseudoStatement', 'text' :  text });			
-				$(conditionElement).inject($(this.basketBodyType));				
-			}.bind(this));					
+					this.text[2] = dbAlias + "." + tableAlias + "." + dbObject.getColumnName() + " " + condition.getConditionString() + " " + condition.getConstraintValue(); 	
+				}
+				
+			}.bind(this));
+			
+			if (i == this.getBasketStruct().getBasketObjects().length)
+			{
+				insertText = new Element('span', { 'class' : 'PseudoStatement', 'text' :  this.text[2] });
+				$(insertText).inject($(this.basketBodyType));
+			}
+			i++;
 		}.bind(this));
 		
 		return this.basketBodyType;
+	},
+	
+	/* @param String name The string that should be hashed
+	 * @return String The hashed string */
+	getAlias: function(name) 
+	{
+		if (!this.aliases.has(name))
+		{
+			i = 1;
+			aliasSuggestion = name.substring(0, i);
+			while (this.aliases.keyOf(aliasSuggestion) && i <= name.length) 
+			{
+				i++;
+				aliasSuggestion = name.substring(0, i);
+			}
+			if (this.aliases.keyOf(aliasSuggestion)) /* All the letters in the name are already taken */
+			{
+				addedNumber = "1";
+				aliasSuggestion = aliasSuggestion + addedNumber;
+				while (this.aliases.keyOf(aliasSuggestion + addedNumber))
+				{
+					addedNumber = addedNumber + 1;
+					aliasSuggestion = aliasSuggestion + addedNumber;
+				}
+			}				
+			this.aliases.set(name, aliasSuggestion);		
+		}
+		return this.aliases.get(name);
 	},
 });
 
@@ -2442,10 +2605,11 @@ var BasketSubmitView = new Class(
 	
 	setupBasketBodyType: function()
 	{
+	
 		this.basketBodyType = new Element('div', { 'class' : 'BasketBodyType' });
 		
-		var submitInput = new SendButton(this);
-		
+		this.submitButton = new SendButton(this);
+			
 		// Contact Information
 		inputHolder = new Element('div', { 'class' : 'inputHolder' });
 		$(inputHolder).inject($(this.basketBodyType));		
@@ -2455,14 +2619,34 @@ var BasketSubmitView = new Class(
 		$(this.emailInput).set("id", "email");		
 		$(this.emailInput).inject($(inputHolder));	
 		this.submitButton.addRequirement(this.emailInput);
+		
 		$(this.emailInput).addEvents({
+			"change" : function() { 		
+				if ($(this.emailInput).get("value") == this.emailInput.options.defaultText || $(this.emailInput).get("value") == "")
+				{	
+					$(this.emailInput).setStyle("background-color", "white");	
+					this.emailInput.setValid(false);
+				}
+				else if ((($(this.emailInput).get("value").split('@').length) != 2) || (($(this.emailInput).get("value").split('@')[1].split(".").length) != 2) || ((($(this.emailInput).get("value").split('@')[1].split(".").length) == 2) && (($(this.emailInput).get("value").split('@')[1].split(".")[1].clean().length)  == 0)))   
+				{
+					$(this.emailInput).setStyle("background-color", "#DDAAAA"); 
+					this.emailInput.setValid(false);
+				}				
+				else 
+				{
+					$(this.emailInput).setStyle("background-color", "#AADDAA");
+					this.emailInput.setValid(true);				
+				}
+				// Tell submit button about email's validity.
+				this.submitButton.update();
+			}.bind(this),
 			"keyup" : function() { 		
 				if ($(this.emailInput).get("value") == this.emailInput.options.defaultText || $(this.emailInput).get("value") == "")
 				{
 					$(this.emailInput).setStyle("background-color", "white");	
 					this.emailInput.setValid(false);
 				}
-				else if ((($(this.emailInput).get("value").split('@').length) != 2) || (($(this.emailInput).get("value").split('@')[1].split(".").length) != 2)) 
+				else if ((($(this.emailInput).get("value").split('@').length) != 2) || (($(this.emailInput).get("value").split('@')[1].split(".").length) != 2) || ((($(this.emailInput).get("value").split('@')[1].split(".").length) == 2) && (($(this.emailInput).get("value").split('@')[1].split(".")[1].clean().length)  == 0)))   
 				{
 					$(this.emailInput).setStyle("background-color", "#DDAAAA"); 
 					this.emailInput.setValid(false);
@@ -2482,50 +2666,53 @@ var BasketSubmitView = new Class(
 		$(inputHolder).inject($(this.basketBodyType));		
 		var inputLabel = new Element('div', { 'class' : 'inputLabel', 'text' : '2. Delivery type' });
 		$(inputLabel).inject($(inputHolder));
-		var deliveryInput = new SpecialSelect(this);		
+		
+		this.deliveryInput = new SpecialSelect(this);		
+		
 		var flatfileOption0 = new Element('option', { "value" : "", "text" : "<Choose type>" });
 		var flatfileOption1 = new Element('option', { "value" : "Flat file", "text" : "Flat file" });
 		var flatfileOption2 = new Element('option', { "value" : "Database", "text" : "Database" });
-		$(flatfileOption0).inject($(deliveryInput));		
-		$(flatfileOption1).inject($(deliveryInput));
-		$(flatfileOption2).inject($(deliveryInput));
-		$(deliveryInput).inject($(inputHolder));	
+		
+		$(flatfileOption0).inject($(this.deliveryInput));		
+		$(flatfileOption1).inject($(this.deliveryInput));
+		$(flatfileOption2).inject($(this.deliveryInput));
+		$(this.deliveryInput).inject($(inputHolder));	
 				
-		delimiterOption = new SpecialInput({ 	
+		this.delimiterOption = new SpecialInput({ 	
 												"defaultText" : "Delimiter (, - | .)",  
 												"width" : 110,	
 												"fontsize" : "0.9em"																						
 											});
 		
-		$(delimiterOption).setStyle("margin-left", "10px");
-		$(delimiterOption).inject($(inputHolder));
-		$(delimiterOption).setStyle("display", "none");
+		$(this.delimiterOption).setStyle("margin-left", "10px");
+		$(this.delimiterOption).inject($(inputHolder));
+		$(this.delimiterOption).setStyle("display", "none");
 		
-		databaseOption = new SpecialInput({ "defaultText" : "Name of database",
+		this.databaseOption = new SpecialInput({ "defaultText" : "Name of database",
 											"width" : 130,	
 										    "fontsize" : "0.9em"
 										  });
-		$(databaseOption).setStyle("margin-left", "10px");
-		$(databaseOption).inject($(inputHolder));
-		$(databaseOption).setStyle("display", "none");
+		$(this.databaseOption).setStyle("margin-left", "10px");
+		$(this.databaseOption).inject($(inputHolder));
+		$(this.databaseOption).setStyle("display", "none");
 				
-		$(deliveryInput).addEvents({
+		$(this.deliveryInput).addEvents({
 			"change" : function() {
-				var text = $(deliveryInput).get("value");
+				var text = $(this.deliveryInput).get("value");
 				if (text == "Flat file")
 				{
-					$(delimiterOption).setStyle("display", "inline");
-					$(databaseOption).setStyle("display", "none");
+					$(this.delimiterOption).setStyle("display", "inline");
+					$(this.databaseOption).setStyle("display", "none");
 				}
 				else if (text == "Database")
 				{
-					$(delimiterOption).setStyle("display", "none");
-					$(databaseOption).setStyle("display", "inline");
+					$(this.delimiterOption).setStyle("display", "none");
+					$(this.databaseOption).setStyle("display", "inline");
 				}
 				else
 				{
-					$(delimiterOption).setStyle("display", "none");
-					$(databaseOption).setStyle("display", "none");	
+					$(this.delimiterOption).setStyle("display", "none");
+					$(this.databaseOption).setStyle("display", "none");	
 				}
 			}.bind(this)
 		});
@@ -2534,23 +2721,103 @@ var BasketSubmitView = new Class(
 		inputHolder = new Element('div', { 'class' : 'inputHolder' });
 		$(inputHolder).inject($(this.basketBodyType));		
 		var inputLabel = new Element('div', { 'class' : 'inputLabel', 'text' : '3. Send request' });
-		$(inputLabel).inject($(inputHolder));
-		
-		$(submitInput).inject($(inputHolder));	
-		$(submitInput).attach();
-	
+		$(inputLabel).inject($(inputHolder));		
+		$(this.submitButton).inject($(inputHolder));	
+		this.submitButton.attach();
+		this.confirmElement = new Element('span', { 'class' : 'Confirm' });
+		$(this.confirmElement).setStyle("display", "none");
+		$(this.confirmElement).inject($(inputHolder));
 		return this.basketBodyType;
 	},
 	
 	submit: function()
 	{
+		/* Send email */
 		if (this.emailInput.isValid())
-		{
-			console.log("Submitting.");
+		{		
+			/* OUTPUT GENERATION */
+			
+			/* Does the user want Flat file or Database? */
+			deliveryType = $(this.deliveryInput).get("value");
+			
+			/* If flat file, what delimiter? */
+			deliveryOption = "No option";
+			if (deliveryType == "Flat file")
+			{
+				deliveryOption = $(this.delimiterOption).get("value").clean();
+				if (deliveryOption.length < 1)
+				{
+					console.log("Deliveryoption is too short");			
+					return false;
+				}
+				else if (deliveryOption == this.delimiterOption.getDefault())
+				{
+					console.log("Deliveryoption is still default.");
+					return false;
+				}
+			}
+			/* if Database, which database? */
+			else if (deliveryType == "Database")
+			{
+				deliveryOption = $(this.databaseOption).get("value").clean();
+				if (deliveryOption.length < 1)
+				{
+					console.log("Deliveryoption is too short");			
+					return false;
+				}
+				else if (deliveryOption == this.databaseOption.getDefault())
+				{
+					console.log("Deliveryoption is still default.");
+					return false;
+				}
+			}
+			else
+				return false; /* Else, fail */
+			
+			/* Generate list of columns, and list of conditions. */
+			pseudoText = this.parentBasketHeader.parentBasket.getPseudoText();
+			
+			/* Send email with 1) Email 2) Deliverytype 3) Deliveryoption 4) Basket */
+			emailaddress = $(this.emailInput).get("value");
+			
+			//AJAX.
+			// ui_sendemail.php
+			var emailRequest = new Request({
+				url: 'php/ui_sendemail.php',
+				method: 'post',
+				onRequest: function(){
+					console.log("Sending request..");
+				},
+				onSuccess: function(responseText){
+					console.log(responseText);
+				},
+				onFailure: function(){
+					console.log("Failed request.");
+				}
+			}).send({
+				data: 'email=' + emailaddress + '&text=' + pseudoText + "&deliverytype=" + deliveryType + "&deliveryOption=" + deliveryOption
+			});
+			return true;
 		}
-		else
+		else /* Dont do anything. */
 		{
-			console.log("Something is wrong.");
+			return false;
+		}
+	},
+	
+	confirmSubmit: function(successful)
+	{
+		if (successful)
+		{
+			/* Show success */
+			$(this.confirmElement).set("text", "Successfully sent!");
+			$(this.confirmElement).setStyle("display", "inline");
+		}
+		else 
+		{
+			/* Show failure */
+			$(this.confirmElement).set("text", "Send failed!");
+			$(this.confirmElement).setStyle("display", "inline");
 		}
 	},
 });
@@ -2563,7 +2830,7 @@ var SpecialSelect = new Class(
 	{
 		"defaultValid" : null 
 	},
-	initialize: function(parentView) 
+	initialize: function(parentView, options) 
 	{
 		this.setOptions(options);
 		this.parentView = parentView;
@@ -2607,6 +2874,8 @@ var SpecialSelect = new Class(
 	{
 		this.removeEvents();
 	},
+	
+	toElement: function() { return this.element; },
 });
 
 /* Select button with special features */
@@ -2649,9 +2918,26 @@ var SendButton = new Class(
 			},
 			"click" : function()
 			{
-				this.submit();
+				submitSuccessful = this.submit();
+				this.confirmSubmit(submitSuccessful);
 			}.bind(this),
 		});	
+	},
+	
+	confirmSubmit: function(successful)
+	{
+		if (successful) 
+		{
+			/* Show something indicating success */
+			$(this).highlight("#0C0");		
+			this.parentView.confirmSubmit(true);
+		}
+		else
+		{	
+			/* Show something indicating failure */
+			$(this).highlight("#C00");
+			this.parentView.confirmSubmit(false);
+		}
 	},
 	
 	detach: function() {
@@ -2664,8 +2950,8 @@ var SendButton = new Class(
 	},
 	
 	submit: function() 
-	{
-		this.parentView.submit();
+	{	
+		return this.parentView.submit();
 	},
 	
 	update: function()
@@ -2703,6 +2989,8 @@ var SpecialInput = new Class(
 		});	
 		this.attach();
 	},
+	
+	getDefault: function() { return this.options.defaultText; },
 	
 	toElement: function() { return this.element; },
 	
@@ -2756,6 +3044,7 @@ var BasketStructure = new Class(
 	initialize: function() 
 	{
 		this.basketObjects = new Array(); /* Represents the Database Objects that are in the basket, 0 - infinity */
+		this.aliases = new Hash();
 	},	
 
 	/* Add an object to the basket. 
@@ -2779,8 +3068,8 @@ var BasketStructure = new Class(
 				foundItem = true;
 			}
 		}.bind(this));
-		if (!foundItem)
-			throw new Error("Warning, did not found item that was supposed to be removed!");
+		//if (!foundItem)
+		//	throw new Error("Warning, did not found item that was supposed to be removed!");
 	},
 	
 	/* Remove all basket objects. */
@@ -2800,6 +3089,7 @@ var BasketStructure = new Class(
 					{
 						return basketObject.getDbObject().compareTo(dbObject)
 					});
+		//console.log("isInBasket? " + returnBool);
 		return returnBool;
 		
 	},
@@ -2814,7 +3104,104 @@ var BasketStructure = new Class(
 				returnBasketObject = basketObject;
 		});
 		return returnBasketObject;
-	}
+	},
+	
+	getPseudo: function()
+	{
+		this.usedAliases = new Array();
+		
+		pseudoText = "";
+		i = 1;
+		Array.each(this.getBasketObjects(), function(basketObject) 
+		{
+			if (i == 1)
+				pseudoText = pseudoText + "SELECT ";
+			
+			dbObject = basketObject.getDbObject();
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
+			
+			pseudoText = pseudoText + dbAlias + "." + tableAlias + "." + dbObject.getColumnName();
+			if (i < this.getBasketObjects().length)
+					pseudoText = pseudoText + ", ";
+			i++;		
+		}.bind(this));		
+		
+		i = 1;
+		Array.each(this.getBasketObjects(), function(basketObject)
+		{
+			if (i == 1)
+				pseudoText = pseudoText + " FROM ";
+	
+			dbObject = basketObject.getDbObject();
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
+			
+			var aliasAlreadyUsed;
+			aliasAlreadyUsed = Array.some(this.usedAliases, function(usedAlias)
+			{
+				return (usedAlias.database == dbAlias && usedAlias.table == tableAlias);
+			});
+			
+			if (!aliasAlreadyUsed)
+			{
+				if (i != 1)
+					pseudoText = pseudoText + ", ";	
+				this.usedAliases.push({"database" : dbAlias, "table" : tableAlias});	
+				pseudoText = pseudoText + dbObject.getDatabaseName() + "." + dbObject.getTableName() + " AS " + dbAlias + "." + tableAlias;			
+			}			
+			i++;
+		}.bind(this));
+					
+		i = 1;
+		whereSet = false;
+		Array.each(this.getBasketObjects(), function(basketObject)
+		{		
+			dbObject = basketObject.getDbObject();
+			dbAlias = this.getAlias(dbObject.getDatabaseName());	
+			tableAlias = this.getAlias(dbObject.getTableName());
+			Array.each(basketObject.getConditions(), function(condition)
+			{
+				if (!whereSet)
+				{
+					whereSet = true;
+					pseudoText = pseudoText + " WHERE ";			
+				}
+				else	
+					pseudoText = pseudoText + " AND ";		
+				pseudoText = pseudoText + dbAlias + "." + tableAlias + "." + dbObject.getColumnName() + " " + condition.getConditionString() + " " + condition.getConstraintValue();	
+			}.bind(this));
+		}.bind(this));
+		
+		return pseudoText;
+	},	
+    /* @param String name The string that should be hashed
+	 * @return String The hashed string */
+	getAlias: function(name) 
+	{
+		if (!this.aliases.has(name))
+		{
+			i = 1;
+			aliasSuggestion = name.substring(0, i);
+			while (this.aliases.keyOf(aliasSuggestion) && i <= name.length) 
+			{
+				i++;
+				aliasSuggestion = name.substring(0, i);
+			}
+			if (this.aliases.keyOf(aliasSuggestion)) /* All the letters in the name are already taken */
+			{
+				addedNumber = "1";
+				aliasSuggestion = aliasSuggestion + addedNumber;
+				while (this.aliases.keyOf(aliasSuggestion + addedNumber))
+				{
+					addedNumber = addedNumber + 1;
+					aliasSuggestion = aliasSuggestion + addedNumber;
+				}
+			}				
+			this.aliases.set(name, aliasSuggestion);		
+		}
+		return this.aliases.get(name);
+	},
 });
 
 /* Contents of the basket. Containts a database object and an array of conditions */
@@ -2946,10 +3333,10 @@ var DbObject = new Class(
 	
 	compareTo: function(otherDbObject) 
 	{
-		if (this.getDatabaseName().clean() == otherDbObject.getDatabaseName().clean() ||
-			this.getTableName().clean()    == otherDbObject.getTableName().clean()    ||
+		if (this.getDatabaseName().clean() == otherDbObject.getDatabaseName().clean() &&
+			this.getTableName().clean()    == otherDbObject.getTableName().clean()    &&
 			this.getColumnName().clean()   == otherDbObject.getColumnName().clean())
-			return true;
+				return true;
 		else 
 			return false;
 	},
