@@ -1,32 +1,31 @@
-body{
-	  background-color: #ddd;
-	  margin:0;
-	  padding:0 0 0 0;
-}
-div#right-sidebar
-{
-  position:absolute;
-  top:17%;
-  right:0;
-  width:23%;
-  height:100%;
-  padding-right: 10px;
+body {
+	background-color: #ddd;
+	margin: 0;
+	padding: 0;
 }
 
-@media screen{
-	body>div#right-sidebar
-	{
-		position:fixed;
+div#right-sidebar {
+	position: absolute;
+  	top: 17%;
+  	right: 0;
+  	width: 23%;
+  	height: 100%;
+  	padding-right: 10px;
+}
+
+@media screen {
+	body>div#right-sidebar {
+		position: fixed;
 	}
 }
 
-* html body{
-	overflow:hidden;
+* html body {
+	overflow: hidden;
 } 
 
-* html div#content{
-	height:100%;
-	overflow:auto;
+* html div#content {
+	height: 100%;
+	overflow: auto;
 }
 
 #basket-header {
@@ -44,8 +43,7 @@ div#right-sidebar
 }
  
  
-#window 
-{
+#window {
 	margin: 30px 0px 5px 30px;
 	width: 70%;
 }
@@ -67,10 +65,10 @@ div#right-sidebar
 #footer {
 	width: 80%;
 }
-#filter
-{	
+
+#filter {	
 	border-color: #DDD;
-	border-width : 2px;
+	border-width: 2px;
 	border-style: solid;
 	display: inline;
 	box-shadow: 4px 4px 5px #AAA;	
@@ -83,36 +81,27 @@ div#right-sidebar
 	color: #333;
 }
 
-#status{
+#status {
     width:50%;
     padding:10px;
     outline:none;
     height:36px;
 }
-.focusField{
-        border:solid 2px #73A6FF;
-        background:#EFF5FF;
-        color:#000;
-		box-shadow: 1px 1px 3px #333;	
-    }
-    .idleField{
-        background:#EEE;
-        color: #6F6F6F;
-        border: solid 2px #DFDFDF;
-		box-shadow: 1px 1px 3px #333;	
-    }
 
-	
-	
-#inputContainer {
-	margin-left: 10px;
-}
+.focusField {
+    border:solid 2px #73A6FF;
+    background:#EFF5FF;
+    color:#000;
+	box-shadow: 1px 1px 3px #333;	
 }
 
-#inputContainer tr
-{
-	margin: 10px;
-}
+.idleField {
+	background:#EEE;
+    color: #6F6F6F;
+    border: solid 2px #DFDFDF;
+	box-shadow: 1px 1px 3px #333;	
+}	
+
 input {
 	font-size: 0.8em;
 }
@@ -122,21 +111,15 @@ input {
 	bottom: 13px;
 }
 
-.collection
-{
+.collection {
 	background-color: #666;
-	position: relative;
-	top: 7px;
-	min-width: 135px;
-	max-width: 135px;
-	min-height: 68px;
-	max-height: 68px;
+	width: 135px;
 	border: none;
 	cursor: default;
 	overflow: hidden;
-	padding-left: 3px;
-	margin-right: 4px;
+	margin-right: 2px;
 }
+
 .collectionRows {
 	margin-bottom: 3px;
 	padding-right: 3px;
@@ -144,36 +127,21 @@ input {
 	overflow-y: auto;
 }
 
-#inputContainer tr .subtitleTd
-{
-	width: 120px;
-	height: 50px;
-}
-
-.subtitle 
-{
-	height: 50px;
-	bottom: 48px;
+.subtitle {
     font-family: Helvetica;
-    font-size: 12px;
+    font-size: 14px;
     font-variant: small-caps;
-    position: relative;
 	color: #eee;
-	left: 3px;
+	width: 160px;
+	margin-left: 3px;
 }
 
-#first 
-{
-	position: relative;
-	bottom: 56px;
-}
-
-#header
-{
+header {
 	padding-top: 10px;
 	background-color: #666;
-	width: 100%;
-	height: 17%;
+	width: 95%;
+	height: 75px;
+	padding-left: 5%;
 }
 
 
@@ -184,14 +152,15 @@ input {
 	padding: 3px 0px 3px 10px;
 	border-radius: 0.5em;
 	margin: 3px 0px 3px 0px;
-		box-shadow: 1px 1px 3px #333;	
+	box-shadow: 1px 1px 3px #333;	
 }
-.DataBaseElementText 
-{
+
+.DataBaseElementText {
 	font-family: Helvetica;
     font-size: 10px;
     font-variant: small-caps;
 }
+
 .DatabaseElementRemove {
 	float: right;
 	margin-right: 10px;
@@ -211,20 +180,21 @@ input {
 	top: 3px;
 	margin-left: 38px;
 	font-family: Helvetica;
-	font-size: 11px;
+	font-size: 14px;
 	font-variant: small-caps;
 }
+
 #eraseContents img {
 	width: 25px;
 	height: 25px;
 }
+
 #eraseContents span {
 	position: relative;
 	bottom: 10px;
 }
 
-.Row 
-{
+.Row {
 	width: 100%;
 	margin: 5px;
 	border-width: 0px 0px 1px 0px;
@@ -233,13 +203,11 @@ input {
 	padding: 5px 0px;
 }
 
-.RowTr 
-{
+.RowTr {
 	width: 80%;
 }
 
-.RowFilter
-{
+.RowFilter {
 	background-color: #73A6FF;
 	color: white;
 	position: relative;
@@ -251,15 +219,15 @@ input {
 	font-variant: small-caps;
 	width: 10%;
 }
-.RowName
-{
+
+.RowName {
 	width: 30px;
 	font-family: calibri;
 	font-size: 20px;
 	margin: 0px 10px 0px 10px;
 }
-#numHits
-{
+
+#numHits {
 	float: left;
 	position: relative;
 	top: 7px;
@@ -281,20 +249,24 @@ input {
 	overflow: hidden;	
 	width: 80%;
 }
+
 .BasketCondition {
 	font-family: Helvetica;
 	font-size: 11px;
 	font-variant: small-caps;
 }
+
 .BasketConditionInput {
 	margin-left: 40px;
 }
+
 .BasketAdd {
 	margin-left: 20px;
 	font-family: Helvetica;
 	font-size: 11px;
 	font-variant: small-caps;
 }
+
 .BasketItem {
 	margin-top: 20px;
 	background-color: white;
@@ -305,43 +277,47 @@ input {
 	border-radius: 0.7em;
 	margin-right: 20px;
 }
+
 .BasketName {
 	margin: 10px;
 	font-family: Helvetica;
 	font-size: 10px;
 	font-variant: small-caps;
 }
+
 #aboveMain {
 	margin-left: 10px;
 	margin-bottom: 3px;
 	font-family: Helvetica;
-	font-size: 11px;
+	font-size: 17px;
 	font-variant: small-caps;
 }
-#select {
+
+#select, #unselect {
 	margin-right: 3px;
 }
-#unselect {
-	margin-right: 3px;
-}
+
 #withselected {
 	margin-left: 35px;
 }
+
 #selectaction {
 	font-size: 1em;
 	font-family: Helvetica;
 	font-variant: small-caps;
 }
+
 #performSelectAction {
 	padding: 2px 4px 2px 4px;
 	background-color: #888;
 	border-radius: 0.3em;
 	margin-left: 5px;
 	color: white;
-	font-size: 11px;
+	font-size: 14px;
 	font-family: Helvetica;
 	font-variant: small-caps;
 }
+
 #filterInfo {
 	position: relative;
 	top: 2px;
@@ -350,38 +326,20 @@ input {
 	font-family: Helvetica;
 	font-variant: small-caps;
 }
-.submit {
+
+.submit, .addSelect {
 	color: #666;
 	font-size: 18px;
 	font-family: Helvetica;
 	font-variant: small-caps;
 	margin-left: 3px;
-	margin-right: 5px;
 	padding: 2px 5px 2px 5px;
 	background-color: #ddd;
 	border-radius: 0.6em;
 	font-weight: bold;
-	position: relative;
-	bottom: 15px;
 	box-shadow: 1px 1px 3px #333;	
 }
 
-.addSelect {
-	color: #666;
-	font-size: 18px;
-	font-family: Helvetica;
-	font-variant: small-caps;
-	margin-left: 3px;
-	padding: 2px 5px 2px 5px;
-	background-color: #ddd;
-	border-radius: 0.6em;
-	position: relative;
-	bottom: 15px;
-	box-shadow: 1px 1px 3px #333;	
-}
-.collectionFooter {
-	
-}
 .CollectionFooterButton {
 	position: relative;
 	left: 8px;
@@ -391,12 +349,13 @@ input {
 	font-variant: small-caps;
 	margin-right: 15px;
 }
-.collectionFooterTd {}
+
 .basketChangeView {
 	margin-right: 4px;
 	position: relative;
 	top: 8px;
 }
+
 .basketviewspan {
 	border-width: 0px 1px 0px 0px; 
 	border-style: dotted;
@@ -404,25 +363,30 @@ input {
 	margin-left: 7px;
 	padding-right: 7px;
 }
+
 .basketviewspan:nth-child(3) {
 	border-width: 0px 0px 0px 0px; 
 	margin-left: 7px;
 }
+
 .basketviewspan:nth-child(1) {
 	border-width: 0px 1px 0px 0px; 
 	margin-left: 18px;
 	padding-right: 7px;
 }
+
 .BasketBodyType {
 	margin-top: 20px;
 	width: 280px;
 }
+
 .customarea {
 	width: 250px;
 	height: 60px;
 	margin-bottom: 10px;
 	 resize:vertical;
 }
+
 .BasketBodyHeader {
 	font-size: 12px;
 	font-family: Arial;
@@ -431,6 +395,7 @@ input {
 	margin-left: 10px;
 	margin-bottom: 20px;
 }
+
 .notice {
 	background-color: #ccc; !#73A6FF;
 	color: black;
@@ -441,12 +406,14 @@ input {
 	padding: 8px;
 	box-shadow: 1px 1px 2px #ccc;	
 }
+
 .CustomAddAnother {
 	margin-left: 10px;
 	font-size: 11px;
 	font-family: Helvetica;
 	font-variant: small-caps;
 }
+
 .removeAnother {
 	color: #999999;
     font-family: Helvetica;
@@ -456,11 +423,13 @@ input {
     position: relative;
 	top: 17px;
 }
+
 .inputLabel {
 	font-size: 12px;
 	font-family: Arial;
 	margin-bottom: 5px;
 }
+
 .inputHolder {
 	margin-bottom: 10px;
 }
@@ -475,6 +444,7 @@ input {
 	font-family: Helvetica;
 	font-variant: small-caps;
 }
+
 .RowDatabase {
 	width: 20%;
 	font-family: arial;
@@ -484,6 +454,7 @@ input {
 	max-width: 250px;
 	overflow: hidden;
 }
+
 .RowTable {
 	width: 30%;
 	font-family: arial;
@@ -491,6 +462,7 @@ input {
 	margin: 0px 10px 0px 10px;
 	overflow: hidden;
 }
+
 .RowColumn {
 	width:40%;
     font-family: Arial;
@@ -503,15 +475,17 @@ input {
     overflow: hidden;
 	font-weight: bold;
 }
+
 .ViewNotSupported {
 	width:70%;
-    	font-family: Helvetica;
+    font-family: Helvetica;
 	font-size: 9px;
 	color: #666666;
     margin-left: 10px;
     margin-right: 10px;
     margin-top: 0;
 }
+
 .Aggregation {
 	background-color: #EEEEEE;
     border-color: #DDDDDD;
@@ -519,14 +493,17 @@ input {
     border-width: 0 0 1px;
     padding: 10px;
 }
+
 .Conditions {
 	background-color: #EEE;
 	padding: 10px 10px 20px;
 }
+
 .ColumnAdd {
 	background-color: #666;
 	padding: 10px 10px;
 }
+
 .ColumnRowButton {
 	padding: 1px 3px;
 	font-family: Helvetica;
@@ -534,22 +511,27 @@ input {
 	margin: 0px 5px;
 	color: white;
 }
+
 #ActivateAggregation {
 	font-family: Arial;
 	font-size: 15px;
 	margin: 5px 20px 10px 5px;
 }
+
 #aggregationInfo {
 	font-family: Arial;
 	font-size: 10px;
 	margin-left: 15px;
 }
+
+
 #ConditionHeader {
 	font-family: Arial;
 	font-size: 15px;
 	display: inline;
 	margin: 0px 10px 10px 5px;
 }
+
 #ConditionHeaderHelp {
 	font-family: Arial;
 	font-size: 10px;
@@ -557,13 +539,16 @@ input {
 	margin-bottom: 10px;
 	margin-left: 5px;
 }
+
 .conditionSelect {
 	display: 'inline';
 	margin-right: 10px;
 }
+
 .conditionHeaderDiv {
 	margin-bottom: 15px;
 }
+
 .SelectDiv {
 	margin-top: 5px;
 	margin-bottom: 5px;
@@ -572,45 +557,54 @@ input {
 	border-width: 1px;
 	border-color: #bbb;
 }
+
 .ConditionInput {
 	margin-right: 5px;
 }
+
 .AndOr {
 	font-family: Helvetica;
 	font-size: 12px;
 	margin-right: 5px;
 	margin-left: 5px;
 }
+
 .AnotherBox {
 	margin-left: 25%;
 }
+
 .AndOrDiv {
 	float: right;
 	position: relative;
 	top: 5px;
 	right: 15px;
 }
+
 .AndOr {
 	margin-left: 7px;
 }
+
 .PseudoStatement {
 	font-family: Helvetica;
 	font-size: 9px;
 	color: #666666;
 	display: block;
 }
+
 .pseudoStatic {
 	font-family: Helvetica;
 	font-size: 11px;
 	color: #666666;
 	display: inline;
 }
+
 .AddConditionButton {
 	font-family: Helvetica;
 	font-size: 9px;
 	color: #666666;
 	margin-left: 10px;
 }
+
 .RemoveSelectionButton {
 	font-family: Helvetica;
 	font-size: 11px;
@@ -621,12 +615,28 @@ input {
 	border-color: #AAA;
 	padding: 2px 5px 2px 5px;
 }	
+
 .inBasket {
 	background-color: #DDD;
 }
+
 .Confirm {
 	margin-left: 10px;
 	font-family: Helvetica;
 	font-size: 11px;
 	color: #666666;
+}
+
+#inputContainer > div {
+	display: inline-block;	
+	height: 100%;
+	vertical-align: top;
+}
+
+.userInput {
+	margin-top: 4px;
+}
+
+.userInputButtons {
+	width: 65px;
 }

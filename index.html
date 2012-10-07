@@ -1,0 +1,87 @@
+<html>
+	<head>
+		<title>
+			Self Service Database Webapplication
+		</title>
+		<script type="text/javascript" src="js/thirdparty/mootools-core-1.3.1-full-compat.js"></script>
+		<script type="text/javascript" src="js/thirdparty/mootools-more-1.3.1.1.js"></script>
+		<script type="text/javascript" src="js/thirdparty/raphaeljs.js"></script>
+		<script type="text/javascript" src="js/thirdparty/Autocompleter.js"></script>
+		<script type="text/javascript" src="js/thirdparty/Autocompleter.Local.js"></script>
+		<script type="text/javascript" src="js/thirdparty/Autocompleter.Request.js"></script>
+		<script type="text/javascript" src="js/thirdparty/Observer.js"></script>		
+		<script type="text/javascript" src="js/thirdparty/flex-uncompressed.js"></script>		
+		<script type="text/javascript" src="js/thirdparty/raphaeljs.js"></script>			
+		<script type="text/javascript" src="js/query-builder.js"></script> 
+		<link rel=stylesheet href="css/thirdparty/spinner.css">
+		<link rel=stylesheet href="css/stylesheet.css">
+		<link rel=stylesheet href="css/thirdparty/Autocompleter.css">
+	</head>
+
+	<body>
+		<div id="right-sidebar">
+			<div id="basket-header">
+			</div>
+			<div id="basket-body">		
+			</div>
+		</div>
+		<div id="content">
+			<header>
+				<div id="inputContainer">					
+					<div class="collection" id="databaseCollection"></div>							
+					
+					<div class="userInput">
+						<input id="databaseInput" type="input" name="database" title="Write the name of the database you want to use"/><br />
+						<div class="subtitle" id="first">show <span id="numChosenDatabases">all</span> databases</div>
+					</div>	
+
+					<div class="userInputButtons">	
+						<span class="addSelect" id="databaseAdd" name="addDatabase" title="Add this database to the databases you want to use"></span>
+						<span class="submit" id="databaseSubmit" name="submitDatabase" title="Show selected databases in the viewing window" ></span>
+					</div>
+
+
+					<div class="collection" id="tableCollection"></div>
+					
+					<div class="userInput">
+						<input id="tableInput" type="input" name="table" title="Write the name of the table you want to use" /><br />
+						<div class="subtitle" id="second"></div>		
+					</div>
+
+					<div class="userInputButtons">	
+						<span class="addSelect" id="tableAdd" name="tableDatabase" title="Add this table to the tables you want to use" ></span>
+						<span class="submit" id="tableSubmit" name="submitTable" title="Show selected tables in the viewing window"></span>						
+					</div>
+
+
+					<div class="collection" id="columnCollection"> </div>
+					
+					<div class="userInput">	
+						<input id="columnInput" type="input" name="column" title="Write the name of the column you want to use" /><br />					
+						<div class="subtitle" id="third"></div>	
+					</div>
+
+					<div class="userInputButtons">
+						<span class="addSelect" id="columnAdd" name="addColumn" title="Add this column to the columns you want to use"></span>
+						<span class="submit" id="columnSubmit" name="submitColumn" title="Show selected columns in the viewing window"></span>
+					</div>	
+				</div>
+			</header>
+			<div id="window">
+				<div id="aboveMain">
+					<span id="select">tick all</span>  <span id="unselect">untick all</span> 
+					<span id="withselected">with checked: </span>
+					<select id="selectaction"> </select>
+					<span id="performSelectAction" title="Apply changes">Apply</span>
+				</div>
+				<div id="main">
+				</div>
+				<span id="footer">
+					<span id="eraseContents"> <img src="images/clear.png" /> <span id="eraseContentsText" title="Clear the window">erase contents</span> </span>
+					<span id="numHits"> </span> <span id="filterInfo"> </span>
+					<input type="input" value="" id="filter" name="inputFilter" />
+				</span>
+			</div>
+		</div>
+	</body>
+</html>
