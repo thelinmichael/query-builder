@@ -1,4 +1,4 @@
 <?php
 
-	$admin_email = "thelinmichael@gmail.com";
+	$admin_email = "user@example.com";
 ?>

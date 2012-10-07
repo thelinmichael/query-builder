@@ -26,7 +26,6 @@
 		mysql_query($sql, $connection);
 	}
 
-	/* Create and select database */
 	$sql = 'CREATE DATABASE ' . $dbname;	
 	mysql_query($sql, $connection) or die ('Could not create database.');
 	mysql_select_db($dbname) or die('Cannot select database'); 	

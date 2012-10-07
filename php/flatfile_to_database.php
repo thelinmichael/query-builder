@@ -19,9 +19,7 @@
 		die('Could not connect: ' . mysql_error());	
 	mysql_select_db($dbname) or die('Cannot select database'); 	
 
-	
-	/* Set start values */
-	
+	/* Set start values */	
 	$row = 1;
 	
 	$currentDatabaseId = 0;
